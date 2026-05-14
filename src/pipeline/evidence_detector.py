@@ -1,31 +1,5 @@
-"""
-ESG Evidence Detection Module
-==============================
-
-Pattern-based detection of evidence elements in ESG disclosure text.
-
-Evidence Quality Hierarchy (GRI Standards, 2021; Cho et al., 2012):
-----------------------------------------------------------------------
-Tier 1 — Third_party (w=0.35): External verification/certification.
-    Strongest substantiation — independent, verifiable. (GRI 2-5)
-Tier 2 — KPI (w=0.30): Quantitative metrics with ESG relevance.
-    Measurable, comparable, falsifiable. (GRI 302/305)
-Tier 3 — Standard (w=0.20): References to normative frameworks.
-    Demonstrates awareness and alignment. (GRI 2-23)
-Tier 4 — Time_bound (w=0.15): Temporal specificity.
-    Adds concreteness but not independently verifiable. (GRI 3-3)
-
-References:
-    GRI (2021). GRI Universal Standards 2021.
-    Cho, C.H., et al. (2012). "The Role of Environmental Disclosure
-        Quality." J. Account. Public Policy, 31(1), 73-90.
-    Patten, D.M. (2002). "The relation between environmental performance
-        and environmental disclosure." Accounting, Orgs & Society.
-"""
-
 import re
 import pandas as pd
-from pathlib import Path
 from dataclasses import dataclass
 
 @dataclass
@@ -107,15 +81,6 @@ QUALITY_WEIGHTS = {t: p.weight for t, p in EVIDENCE_TYPES.items()}
 VALID_EVIDENCE_TYPES = list(EVIDENCE_TYPES.keys())
 
 def detect_evidence(text: str, context: str = "") -> dict:
-    """
-    Detect evidence elements in text using pattern matching.
-
-    Returns:
-        dict with:
-        - has_evidence: bool
-        - evidence_types: list of detected types
-        - evidence_matches: dict of type -> list of matches
-    """
     full_text = f"{context} {text}".lower() if context else text.lower()
     
     evidence_types = []
@@ -139,15 +104,6 @@ def detect_evidence(text: str, context: str = "") -> dict:
     }
 
 def calculate_quality_score(evidence_types: list) -> float:
-    """
-    Calculate evidence quality from detected types (GRI hierarchy).
-
-    Quality = Σ(weights of found types) / Σ(all weights)
-
-    This is only the regex-based quality signal. The full Evidence
-    Strength (ES) is computed in the EWRI module by combining quality,
-    calibrated similarity, and directional NLI.
-    """
     if not evidence_types:
         return 0.0
 
@@ -174,7 +130,6 @@ def extract_kpi_values(text: str) -> list[str]:
     return list(set(values))[:10]
 
 def process_dataframe(df: pd.DataFrame, text_col: str = "sentence") -> pd.DataFrame:
-    """Process entire dataframe and add evidence detection columns."""
     print(f"Detecting evidence in {len(df):,} sentences...")
 
     results = []

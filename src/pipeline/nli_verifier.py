@@ -15,7 +15,6 @@ class NLIResult:
 NLI_LABELS = ["contradiction", "neutral", "entailment"]
 
 class NLIVerifier:
-    """Model-based NLI verifier using mDeBERTa-v3-xnli."""
 
     MODEL_NAME = "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"
     
@@ -40,7 +39,6 @@ class NLIVerifier:
         self._model = None
 
     def _load_model(self):
-        """Lazy load tokenizer/model for batched NLI inference."""
         if self._model is None or self._tokenizer is None:
             from transformers import AutoTokenizer, AutoModelForSequenceClassification
             from transformers import logging as hf_logging

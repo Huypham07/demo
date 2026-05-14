@@ -1,11 +1,8 @@
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, field
-import warnings
-from tqdm.auto import tqdm
+from typing import List, Dict, Tuple, Optional
 
+import numpy as np
+import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine
 
@@ -58,7 +55,6 @@ class ClaimEvidenceLink:
     search_method: str = "window"
 
 class ClaimEvidenceLinker:
-    """Link ESG claims to supporting evidence sentences."""
 
     def __init__(
         self,
@@ -128,7 +124,6 @@ class ClaimEvidenceLinker:
         print("[EvidenceLinker] NLI verifier initialized")
     
     def embed_sentences(self, texts: List[str], batch_size: int = 64) -> np.ndarray:
-        """Embed sentences using sentence transformer."""
         print(f"[EvidenceLinker] Embedding {len(texts)} sentences...")
         embeddings = self.model.encode(
             texts, batch_size=batch_size, show_progress_bar=False, convert_to_numpy=True
@@ -352,12 +347,6 @@ class ClaimEvidenceLinker:
         text_column: str = "text",
         save_embeddings: bool = True,
     ) -> pd.DataFrame:
-        """
-        Link all ESG claims in corpus to their evidence.
-        
-        Returns:
-            DataFrame with linking results.
-        """
         df = df.reset_index(drop=True)
         print(f"[EvidenceLinker] Processing {len(df)} sentences...")
 
@@ -405,7 +394,6 @@ class ClaimEvidenceLinker:
         return result_df
 
 def _linker_kwargs_from_config(config: Optional[dict]) -> Dict:
-    """Map pipeline.yml `evidence.linker` and `model.*` keys to ClaimEvidenceLinker kwargs."""
     if not config:
         return {}
     out: Dict = {}

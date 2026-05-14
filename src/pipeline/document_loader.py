@@ -1,5 +1,3 @@
-"""PDF → text extraction via Docling, with OCR / no-OCR variants and post-extraction cleaning."""
-
 from __future__ import annotations
 
 import re
@@ -14,10 +12,6 @@ MULTI_NEWLINE_RE = re.compile(r"\n{3,}")
 IMAGE_TAG_RE = re.compile(r"<image[^>]*>", re.IGNORECASE)
 
 def _build_converter(use_ocr: bool):
-    """Build a Docling DocumentConverter configured for the requested OCR mode.
-
-    Lazy-imports docling so the module loads even when docling is not installed
-    (the demo flow is the only consumer)."""
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions
     from docling.document_converter import DocumentConverter, PdfFormatOption
@@ -33,7 +27,6 @@ def _build_converter(use_ocr: bool):
     )
 
 def _convert(pdf_path: Path, use_ocr: bool) -> tuple[str, int]:
-    """Run Docling on the PDF and return (markdown_text, page_count)."""
     converter = _build_converter(use_ocr=use_ocr)
     result = converter.convert(str(pdf_path))
     doc = result.document
@@ -49,7 +42,6 @@ def _convert(pdf_path: Path, use_ocr: bool) -> tuple[str, int]:
     return text, page_count
 
 def clean_extracted_text(text: str) -> str:
-    """Normalise OCR/Docling output for downstream sentence segmentation."""
     text = unicodedata.normalize("NFC", text)
     text = text.replace(" ", " ").replace("​", "")
     text = HYPHEN_BREAK_RE.sub("", text)
@@ -74,13 +66,6 @@ def load_pdf_with_docling(
     mode: str = "auto",
     min_chars_per_page: int = 200,
 ) -> dict:
-    """Load a PDF with Docling and return cleaned text + metadata.
-
-    mode:
-      - "no_ocr": text-layer extraction only (fast, accurate for digital PDFs).
-      - "ocr"   : OCR every page (slow, required for scanned PDFs).
-      - "auto"  : try no_ocr first; fall back to ocr if extracted text is sparse.
-    """
     pdf_path = Path(pdf_path)
     if not pdf_path.exists():
         raise FileNotFoundError(f"PDF not found: {pdf_path}")

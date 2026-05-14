@@ -1,5 +1,3 @@
-"""Neuro-Symbolic Integration Module for ESG-Washing Detection."""
-
 import re
 import math
 import torch

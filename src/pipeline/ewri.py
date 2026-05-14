@@ -87,7 +87,6 @@ def compute_washing_risk(
     return max(0.0, min(1.0, wrs))
 
 def calculate_topic_entropy(topic_counts: dict) -> float:
-    """Normalized Shannon entropy ∈ [0,1]. 1 = uniform, 0 = single-topic."""
     total = sum(topic_counts.values())
     if total == 0:
         return 0.0
