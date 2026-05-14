@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Virtual envs
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+
+# Secrets
+.env
+*.key
+
+# Logs
+*.log
+
+# Aux scripts and one-off charts (kept locally only)
+py_utils/
+old/
+olds/
+
+# Notebook checkpoints
+notebooks/.ipynb_checkpoints/
+
+# Large source data and intermediate parquet (regenerate via pipeline)
+data/extracted/raw_ocr_annual_report.zip
+data/corpus/*.parquet
+data/labels/**/*.parquet
+
+# Demo run outputs
+outputs/demo/
+outputs/demo_smoketest/

@@ -1,0 +1,34 @@
+# Core NLP & ML
+torch>=2.0
+transformers>=4.30
+sentence-transformers>=2.2
+scikit-learn>=1.3
+
+# Vietnamese NLP
+underthesea
+
+# Data processing
+pandas>=2.0
+numpy>=1.24
+pyarrow
+fastparquet
+
+# Visualization
+matplotlib>=3.7
+seaborn>=0.12
+
+# PDF extraction (Docling supports OCR + no-OCR modes for the demo flow)
+docling>=2.0
+
+# Statistics
+scipy>=1.11
+
+# Hyperparameter tuning
+optuna>=3.0
+
+# Config + env
+pyyaml
+python-dotenv
+
+# LLM labeling (Gemini)
+google-genai

@@ -1,0 +1,89 @@
+
+model:
+  topic:
+    name: "vinai/phobert-base"
+    hf_model_id: "huypham71/esg-topic-classifier"
+    path: "outputs/models/topic_classifier/final"
+    max_length: 128
+    labels: ["E", "S_labor", "S_community", "S_product", "G", "Non_ESG"]
+
+  actionability:
+    name: "vinai/phobert-base"
+    hf_model_id: "huypham71/esg-action-classifier"
+    path: "outputs/models/action_classifier"
+    max_length: 128
+    labels: ["Implemented", "Planning", "Indeterminate"]
+
+  sentence_transformer: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+  nli_model: "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"
+
+neuro_symbolic:
+  rule_alpha: 0.3
+  min_rule_confidence: 0.3
+
+evidence:
+  weights:
+    Third_party: 0.35
+    KPI: 0.30
+    Standard: 0.20
+    Time_bound: 0.15
+
+  linker:
+    window_size: 5
+    document_level: true
+    tfidf_top_k: 20
+    similarity_threshold: 0.5
+    top_k_evidence: 3
+    use_nli: true
+    proximity_decay: 0.3
+    tfidf_boost_floor: 0.7
+    tfidf_boost_scale: 0.3
+    tfidf_max_features: 3000
+    tfidf_ngram_range: [1, 2]
+    tfidf_max_df: 0.95
+    nli_contradiction_threshold: 0.2
+
+ewri:
+  action_penalty:
+    Implemented: 0.02
+    Planning: 0.15
+    Indeterminate: 0.55
+  evidence_sensitivity:
+    Implemented: 1.00
+    Planning: 0.85
+    Indeterminate: 0.50
+  contradiction_amplifier: 1.8
+  top_risk_claims: 10
+
+paths:
+  blocks: "data/corpus/blocks.parquet"
+  sentences: "data/corpus/sentences.parquet"
+  esg_sentences: "data/corpus/esg_sentences.parquet"
+  actionability_sentences: "data/corpus/actionability_sentences.parquet"
+  es_scored: "data/corpus/esg_sentences_es_scored.parquet"
+  analysis_dir: "outputs/analysis"
+  report_dir: "outputs/reports"
+  evidence_experiments_dir: "outputs/experiments/evidence"
+
+data_quality:
+  min_sentence_length: 15
+  max_caps_only_length: 80
+  min_alpha_ratio: 0.3
+
+demo:
+  ocr_mode: "auto"
+  min_chars_per_page: 200
+
+banks:
+  - agribank
+  - bidv
+  - bsc
+  - mbbank
+  - shb
+  - techcombank
+  - ocb
+  - vietcombank
+  - viettinbank
+  - vpbank
+
+years: [2020, 2021, 2022, 2023, 2024]

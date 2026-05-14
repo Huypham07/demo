@@ -1,0 +1,74 @@
+defaults:
+    task: topic
+    profile: default
+    seed: 42
+
+common:
+    model:
+        name: vinai/phobert-base
+        max_length: 128
+
+    data:
+        use_context_prev: true
+        use_context_next: true
+
+    training:
+        epochs: 5
+        train_batch_size: 16
+        eval_batch_size: 32
+        learning_rate: 2.0e-5
+        weight_decay: 0.01
+        warmup_ratio: 0.1
+        use_class_weights: true
+        weight_method: sqrt_inverse
+        gradient_accumulation_steps: 1
+        max_grad_norm: 1.0
+        label_smoothing_factor: 0.0
+        fp16: auto
+        metric_for_best_model: macro_f1
+
+    early_stopping:
+        enabled: true
+        patience: 2
+        threshold: 0.0
+
+    neuro_symbolic:
+        enabled: true
+        constraint_lambda: 0.3
+        exactly_one_weight: 1.0
+        implication_weight: 0.5
+        negation_weight: 0.5
+        min_confidence: 0.3
+
+tasks:
+    topic:
+        labels: [E, S_labor, S_community, S_product, G, Non_ESG]
+        paths:
+            train_data: data/labels/topic/train.parquet
+            val_data: data/labels/topic/val.parquet
+            test_data: data/labels/topic/test.parquet
+            output_dir: output/models/topic_classifier
+        training:
+            learning_rate: 1.951e-5
+            weight_decay: 0.0289
+        neuro_symbolic:
+            constraint_lambda: 0.2798
+
+        profiles:
+            default: {}
+
+    action:
+        labels: [Implemented, Planning, Indeterminate]
+        paths:
+            train_data: data/labels/action/train.parquet
+            val_data: data/labels/action/val.parquet
+            test_data: data/labels/action/test.parquet
+            output_dir: output/models/action_classifier
+        training:
+            learning_rate: 2.004e-5
+            weight_decay: 0.0456
+        neuro_symbolic:
+            constraint_lambda: 0.1798
+
+        profiles:
+            default: {}
