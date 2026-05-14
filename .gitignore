@@ -32,10 +32,6 @@ olds/
 # Notebook checkpoints
 notebooks/.ipynb_checkpoints/
 
-# Large source data and intermediate parquet (regenerate via pipeline)
-data/extracted/raw_ocr_annual_report.zip
-data/corpus/*.parquet
-data/labels/**/*.parquet
 
 # Demo run outputs
 outputs/demo/
