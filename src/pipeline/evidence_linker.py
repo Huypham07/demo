@@ -382,27 +382,14 @@ class ClaimEvidenceLinker:
         save_embeddings: bool = True,
         corpus_df: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
-        """
-        Link each claim in df to its best supporting evidence.
-
-        Args:
-            corpus_df: Full document corpus (thesis §3.6.2: "toàn bộ câu trong tài liệu
-                       được biểu diễn thành vector 384 chiều"). When provided, candidates
-                       are searched across all sentences (including Non_ESG), and the
-                       proximity window uses the claim's actual position in the document.
-                       When None, searches within df only (backward-compatible).
-        """
         df = df.reset_index(drop=True)
 
-        # Thesis §3.6.2: embed ALL sentences in the document for candidate search
         if corpus_df is not None:
             search_df = corpus_df.reset_index(drop=True)
             print(f"[EvidenceLinker] Embedding full corpus ({len(search_df):,} sentences)...")
             search_texts = search_df[text_column].tolist()
             search_embeddings = self.embed_sentences(search_texts)
 
-            # Map each claim → its position in the full corpus via sent_id
-            # (preserves document order for proximity window)
             claim_to_search_pos: Dict[int, int] = {}
             if "sent_id" in df.columns and "sent_id" in search_df.columns:
                 sid_to_pos = {sid: i for i, sid in enumerate(search_df["sent_id"])}
