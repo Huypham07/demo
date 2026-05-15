@@ -1,8 +1,13 @@
 import pandas as pd
+import yaml
 import sys
 sys.path.insert(0, ".")
-from src.pipeline.ewri import enrich_with_risk_scores, calculate_bank_year_ewri, scores_to_dataframe
+from src.pipeline.ewri import configure_ewri, enrich_with_risk_scores, calculate_bank_year_ewri, scores_to_dataframe
 from scipy import stats
+
+with open("config/pipeline.yml") as f:
+    _cfg = yaml.safe_load(f)
+configure_ewri(_cfg.get("ewri", {}))
 
 df = pd.read_parquet("outputs/experiments/evidence/evidence_nli.parquet")
 df = enrich_with_risk_scores(df)

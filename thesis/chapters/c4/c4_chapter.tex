@@ -196,15 +196,15 @@ Nghiên cứu so sánh ba phương pháp liên kết bằng chứng trên toàn 
     \item \textbf{No-NLI}: Truy xuất ứng viên bằng TF-IDF + cosine similarity, chấp nhận tất cả ứng viên vượt ngưỡng similarity.
 \end{enumerate}
 
-Ba phương pháp cho tỉ lệ câu có bằng chứng liên kết khác nhau: NLI đạt 99,1\%, Window 96,2\%, và No-NLI 99,8\%. Tỉ lệ cao này phản ánh việc truy xuất TF-IDF + cosine similarity tìm được ứng viên cho hầu hết câu; câu hỏi quan trọng hơn là \textit{chất lượng} liên kết đó có thực sự hỗ trợ tuyên bố không.
+Ba phương pháp cho tỉ lệ câu có bằng chứng liên kết khác nhau: NLI đạt 99,8\%, Window 96,2\%, và No-NLI 99,8\%. Tỉ lệ cao này phản ánh việc truy xuất TF-IDF + cosine similarity tìm được ứng viên cho hầu hết câu; câu hỏi quan trọng hơn là \textit{chất lượng} liên kết đó có thực sự hỗ trợ tuyên bố không.
 
-Phương pháp NLI đạt similarity trung bình 0,745, cao hơn rõ ràng so với Window (0,657, +13,5\%) và tương đương No-NLI (0,752). Điều này xác nhận rằng truy xuất ngữ nghĩa (TF-IDF + embedding similarity) tìm được ứng viên liên quan ngữ nghĩa tốt hơn so với cửa sổ cố định. Trong ba phương pháp, chỉ NLI thực hiện xác minh suy luận: 35,0\% cặp tuyên bố-bằng chứng được NLI xác định là \textit{entailment} (bằng chứng thực sự hỗ trợ tuyên bố), 61,8\% là \textit{neutral} (liên quan chủ đề nhưng không suy ra được), và 3,1\% là \textit{contradiction} (bằng chứng mâu thuẫn).
+Phương pháp NLI đạt similarity trung bình 0,752, cao hơn rõ ràng so với Window (0,656, +14,6\%) và tương đương No-NLI (0,752). Điều này xác nhận rằng truy xuất ngữ nghĩa (TF-IDF + embedding similarity) tìm được ứng viên liên quan ngữ nghĩa tốt hơn so với cửa sổ cố định. Trong ba phương pháp, chỉ NLI thực hiện xác minh suy luận: 33,1\% cặp tuyên bố-bằng chứng được NLI xác định là \textit{entailment} (bằng chứng thực sự hỗ trợ tuyên bố), 61,9\% là \textit{neutral} (liên quan chủ đề nhưng không suy ra được), và 5,0\% là \textit{contradiction} (bằng chứng mâu thuẫn).
 
 Bước xác minh NLI đóng vai trò quan trọng trong việc nâng cao chất lượng liên kết bằng chứng. Khi không có NLI, hệ thống chỉ dựa trên cosine similarity --- một độ đo tương đồng bề mặt không phân biệt được giữa \textit{entailment} (hỗ trợ) và \textit{contradiction} (mâu thuẫn). Ví dụ, câu tuyên bố \textit{``Ngân hàng cam kết giảm 30\% phát thải carbon''} và câu bằng chứng \textit{``Phát thải carbon của ngân hàng tăng 15\% trong năm 2023''} có cosine similarity cao (cùng chủ đề phát thải carbon) nhưng quan hệ NLI là \textit{contradiction}.
 
-Tỉ lệ contradiction 3,2\% cho thấy cơ chế NLI phát hiện và loại bỏ một lượng nhỏ nhưng quan trọng các trường hợp bằng chứng ngược --- những trường hợp mà nếu bỏ qua sẽ làm giảm nghiêm trọng chất lượng đánh giá nguy cơ ESG-washing.
+Tỉ lệ contradiction 5,0\% cho thấy cơ chế NLI phát hiện và loại bỏ một lượng đáng kể các trường hợp bằng chứng ngược --- những trường hợp mà nếu bỏ qua sẽ làm giảm nghiêm trọng chất lượng đánh giá nguy cơ ESG-washing.
 
-Phương pháp liên kết bằng chứng ngữ nghĩa hai giai đoạn (semantic retrieval + NLI verification) cải thiện chất lượng liên kết so với phương pháp cửa sổ ngữ cảnh. Cụ thể: (1) Truy xuất ngữ nghĩa đạt similarity cao hơn cửa sổ (+13,5\%, 0,745 so với 0,657); (2) NLI xác minh cho phép phân biệt giữa bằng chứng hỗ trợ thực sự (entailment, 35,0\%) và bằng chứng trung lập (61,8\%) --- sự phân biệt mà No-NLI và Window không có; (3) Tỉ lệ entailment 35,0\% là chỉ báo thực chất về mức độ tuyên bố ESG được hỗ trợ xác đáng trong báo cáo ngân hàng.
+Phương pháp liên kết bằng chứng ngữ nghĩa hai giai đoạn (semantic retrieval + NLI verification) cải thiện chất lượng liên kết so với phương pháp cửa sổ ngữ cảnh. Cụ thể: (1) Truy xuất ngữ nghĩa đạt similarity cao hơn cửa sổ (+14,6\%, 0,752 so với 0,656); (2) NLI xác minh cho phép phân biệt giữa bằng chứng hỗ trợ thực sự (entailment, 33,1\%) và bằng chứng trung lập (61,9\%) --- sự phân biệt mà No-NLI và Window không có; (3) Tỉ lệ entailment 33,1\% là chỉ báo thực chất về mức độ tuyên bố ESG được hỗ trợ xác đáng trong báo cáo ngân hàng.
 
 \subsection{Phân bố loại bằng chứng}
 \label{subsec:evidence_type_dist}
@@ -232,7 +232,7 @@ Standard     &  1.417 &  1,2\% \\
 
 Time\_bound là loại phổ biến nhất (15,0\%), phản ánh việc báo cáo thường niên ngân hàng thường xuyên đề cập đến năm tài chính, giai đoạn và mốc thời gian cụ thể --- đây là đặc điểm văn phong của tài liệu tài chính, không nhất thiết chứng tỏ cam kết ESG có căn cứ. KPI đứng thứ hai (8,5\%) với các chỉ số định lượng như tỉ lệ phần trăm, đơn vị tấn CO2, kWh, và dư nợ tín dụng xanh. Third\_party (1,2\%) và Standard (1,2\%) là hai loại hiếm nhất --- xác minh độc lập (kiểm toán Big4, chứng nhận Bureau Veritas) và trích dẫn chuẩn ESG (GRI, TCFD, ISO) chỉ xuất hiện ở một số ít phần báo cáo chuyên biệt.
 
-Phần lớn câu trong ngữ liệu (77,8\%) không chứa dấu hiệu bằng chứng theo bốn loại trên, phản ánh thực tế rằng phần lớn nội dung báo cáo là ngôn ngữ tường thuật và định tính. Trong số 32.260 câu ESG được đưa vào giai đoạn liên kết bằng chứng, 35,0\% được NLI xác định là \textit{entailment} --- bằng chứng tìm được thực sự hỗ trợ tuyên bố ESG tương ứng. Con số này là chỉ báo chính về mức độ tuyên bố ESG có căn cứ kiểm chứng trong báo cáo ngân hàng Việt Nam.
+Phần lớn câu trong ngữ liệu (77,8\%) không chứa dấu hiệu bằng chứng theo bốn loại trên, phản ánh thực tế rằng phần lớn nội dung báo cáo là ngôn ngữ tường thuật và định tính. Trong số 32.260 câu ESG được đưa vào giai đoạn liên kết bằng chứng, 33,1\% được NLI xác định là \textit{entailment} --- bằng chứng tìm được thực sự hỗ trợ tuyên bố ESG tương ứng. Con số này là chỉ báo chính về mức độ tuyên bố ESG có căn cứ kiểm chứng trong báo cáo ngân hàng Việt Nam.
 
 \section{Trả lời câu hỏi ba: Phân tích chỉ số EWRI}
 \label{sec:rq3}
@@ -240,7 +240,7 @@ Phần lớn câu trong ngữ liệu (77,8\%) không chứa dấu hiệu bằng 
 \subsection{Tổng quan kết quả EWRI}
 \label{subsec:ewri_overview}
 
-Kết quả tổng hợp chỉ số EWRI được tính cho 50 quan sát ngân hàng cho thấy EWRI trung bình = 36,88 $\pm$ 3,45 (thang điểm 0--100), phạm vi từ 30,26 đến 50,53.
+Kết quả tổng hợp chỉ số EWRI được tính cho 50 quan sát ngân hàng cho thấy EWRI trung bình = 49,68 $\pm$ 4,18 (thang điểm 0--100), phạm vi từ 43,98 đến 63,32.
 
 \begin{table}[H]
 \centering
@@ -250,14 +250,14 @@ Kết quả tổng hợp chỉ số EWRI được tính cho 50 quan sát ngân h
 \toprule
 \textbf{Thành phần} & \textbf{Đóng góp TB} & \textbf{\% EWRI} & \textbf{Std} \\
 \midrule
-Indeterminate & 36,13 & 98,0\% & 3,57 \\
-Implemented   &  0,46 &  1,3\% & 0,10 \\
-Planning      &  0,29 &  0,8\% & 0,15 \\
+Indeterminate & 48,92 & 98,5\% & 4,27 \\
+Implemented   &  0,47 &  0,9\% & 0,10 \\
+Planning      &  0,29 &  0,6\% & 0,15 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Thành phần Indeterminate chiếm đến 98,0\% tổng điểm EWRI, phản ánh thực tế rằng phần lớn tuyên bố ESG trong báo cáo ngân hàng Việt Nam ở trạng thái mơ hồ --- không rõ đã thực hiện hay mới chỉ là dự định. Đây chính là nguồn rủi ro washing chính: các phát biểu thiếu tính cụ thể, không có cam kết thời gian rõ ràng và không kèm bằng chứng kiểm chứng.
+Thành phần Indeterminate chiếm đến 98,5\% tổng điểm EWRI, phản ánh thực tế rằng phần lớn tuyên bố ESG trong báo cáo ngân hàng Việt Nam ở trạng thái mơ hồ --- không rõ đã thực hiện hay mới chỉ là dự định. Đây chính là nguồn rủi ro washing chính: các phát biểu thiếu tính cụ thể, không có cam kết thời gian rõ ràng và không kèm bằng chứng kiểm chứng. Đáng lưu ý là với bộ tham số tối ưu ($\lambda_{Indet}=0{,}50$), bằng chứng NLI \textit{entailment} giảm WRS của câu Indeterminate đi một nửa (từ 0,90 xuống 0,45), nên tỉ lệ entailment nội tại của mỗi ngân hàng cũng ảnh hưởng đáng kể đến EWRI.
 
 \begin{figure}[H]
     \centering
@@ -269,8 +269,8 @@ Thành phần Indeterminate chiếm đến 98,0\% tổng điểm EWRI, phản á
 Các nhận định chính từ phân tích ma trận tương quan trên như sau:
 
 \begin{itemize}
-    \item EWRI tương quan dương rất mạnh với tỉ lệ Indeterminate ($r = 0{,}99$) và tương quan âm rất mạnh với tỉ lệ Implemented ($r = -0{,}97$). Điều này xác nhận rằng nhãn hành động --- đặc biệt là sự phân biệt giữa cam kết đã thực hiện và cam kết mơ hồ --- là yếu tố quyết định chính của EWRI.
-    \item Tỉ lệ Planning không có tương quan đáng kể với EWRI ($r = -0{,}23$), tức là tỉ lệ câu Planning trong báo cáo không dự báo được mức EWRI của ngân hàng.
+    \item EWRI tương quan dương mạnh với tỉ lệ Indeterminate ($\rho = 0{,}80$) và tương quan âm mạnh với tỉ lệ Implemented ($\rho = -0{,}79$). Điều này xác nhận rằng nhãn hành động --- đặc biệt là sự phân biệt giữa cam kết đã thực hiện và cam kết mơ hồ --- là yếu tố quyết định chính của EWRI. So với bộ tham số cũ (tương quan $\approx 0{,}99$), giá trị $\lambda_{Indet}=0{,}50$ cao hơn làm cho bằng chứng NLI tác động mạnh hơn lên WRS của câu Indeterminate, do đó tỉ lệ entailment nội tại của từng ngân hàng cũng đóng góp vào sự phân tán EWRI và làm giảm mức tương quan đơn biến.
+    \item Tỉ lệ Planning không có tương quan đáng kể với EWRI ($\rho = -0{,}13$), tức là tỉ lệ câu Planning trong báo cáo không dự báo được mức EWRI của ngân hàng.
 \end{itemize}
 
 \subsection{Phân tích ESG-washing đối với các ngân hàng}
@@ -294,21 +294,21 @@ Dưới đây là xếp hạng 10 ngân hàng theo EWRI trung bình giai đoạn
 \toprule
 \textbf{Hạng} & \textbf{Ngân hàng} & \textbf{Số lượng câu} & \textbf{EWRI} & \textbf{Std} & \textbf{$\bar{R}_I$} & \textbf{$\bar{R}_{In}$} & \textbf{$\bar{R}_E$} \\
 \midrule
-1  & NH\_A  & 1.544 & 33,83 & 2,29 & 36,8\% & 60,5\% & 28,8\% \\
-2  & NH\_J  & 4.513 & 35,30 & 2,18 & 34,9\% & 62,3\% & 32,7\% \\
-3  & NH\_D  & 3.485 & 35,43 & 1,40 & 33,7\% & 63,0\% & 34,8\% \\
-4  & NH\_B  & 4.330 & 35,49 & 2,52 & 34,3\% & 62,2\% & 33,6\% \\
-5  & NH\_I  & 5.155 & 35,81 & 2,39 & 33,7\% & 64,2\% & 40,7\% \\
-6  & NH\_E  & 1.716 & 35,88 & 2,58 & 34,4\% & 64,2\% & 32,8\% \\
-7  & NH\_F  & 3.898 & 36,53 & 1,09 & 32,8\% & 64,8\% & 33,0\% \\
-8  & NH\_G  & 4.303 & 37,49 & 0,41 & 29,3\% & 66,9\% & 33,1\% \\
-9  & NH\_H  & 1.550 & 39,54 & 3,03 & 27,4\% & 70,4\% & 31,8\% \\
-10 & NH\_C  & 1.766 & 43,49 & 4,25 & 21,9\% & 76,7\% & 41,0\% \\
+1  & NH\_I  & 5.155 & 45,96 & 1,30 & 33,7\% & 64,2\% & 39,4\% \\
+2  & NH\_D  & 3.485 & 47,08 & 2,36 & 33,7\% & 63,0\% & 33,8\% \\
+3  & NH\_J  & 4.513 & 47,62 & 2,27 & 34,9\% & 62,3\% & 31,9\% \\
+4  & NH\_A  & 1.544 & 47,96 & 2,36 & 36,8\% & 60,5\% & 28,1\% \\
+5  & NH\_B  & 4.330 & 48,03 & 3,34 & 34,3\% & 62,2\% & 31,0\% \\
+6  & NH\_E  & 1.716 & 49,28 & 3,31 & 34,4\% & 64,2\% & 30,6\% \\
+7  & NH\_F  & 3.898 & 49,68 & 1,80 & 32,8\% & 64,8\% & 31,0\% \\
+8  & NH\_G  & 4.303 & 51,34 & 1,47 & 29,3\% & 66,9\% & 30,5\% \\
+9  & NH\_H  & 1.550 & 54,65 & 6,71 & 27,4\% & 70,4\% & 32,4\% \\
+10 & NH\_C  & 1.766 & 55,22 & 3,56 & 21,9\% & 76,7\% & 38,5\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-NH\_A dẫn đầu với EWRI thấp nhất (33,83), nhờ tỉ lệ Implemented cao nhất (36,8\%) và tỉ lệ Indeterminate thấp nhất (60,5\%). NH\_C xếp cuối với EWRI = 43,49 (chênh 9,66 điểm so với NH\_A), trong đó năm 2020 đạt EWRI = 50,53 --- mức cao nhất toàn tập.
+NH\_I dẫn đầu với EWRI thấp nhất (45,96), nhờ tỉ lệ Indeterminate thấp (64,2\%) và tỉ lệ entailment cao nhất trong nhóm đầu (39,4\%). NH\_A đứng thứ 4 với tỉ lệ Implemented cao nhất (36,8\%) và Indeterminate thấp nhất (60,5\%). NH\_C xếp cuối với EWRI = 55,22 (chênh 9,26 điểm so với NH\_I), trong đó NH\_H năm 2021 đạt EWRI = 63,32 --- mức cao nhất toàn tập.
 
 \begin{figure}[H]
     \centering
@@ -323,7 +323,7 @@ Chủ đề E (Môi trường) có tỉ lệ Planning cao nhất (5,2\%), cho th
 
 Entropy chủ đề Shannon chuẩn hóa (Phương trình~\ref{eq:topic_entropy}) trên 50 quan sát ngân hàng-năm đạt trung bình $\bar{H} = 0{,}801$ ($\sigma = 0{,}094$), với biên độ $[0{,}566;\, 0{,}969]$. Giá trị trung bình gần 1 phản ánh các báo cáo nhìn chung đề cập tương đối đa dạng các chủ đề ESG. Tuy nhiên, một số quan sát có $H < 0{,}65$ cho thấy tình trạng tập trung quá mức vào G (chiếm 52,0\%) trong khi bỏ qua E và S\_product --- kết hợp với EWRI cao của G, đây là dấu hiệu của \textit{selective disclosure}: ngân hàng chủ động chọn chủ đề dễ trình bày mơ hồ để lấp đầy báo cáo~\cite{marquis2016scrutiny}.
 
-Tóm lại chỉ số EWRI phản ánh phù hợp mức độ rủi ro ESG-washing trên 50 quan sát ngân hàng-năm. Kết quả cho thấy: Hệ thống phân biệt rõ ràng giữa 10 ngân hàng, với khoảng cách EWRI trung bình 9,66 điểm giữa nhóm tốt nhất (NH\_A, 33,83) và kém nhất (NH\_C, 43,49); Thành phần Indeterminate đóng góp đến 98,0\% tổng điểm EWRI, xác nhận đây là nguồn rủi ro washing chính trong báo cáo ESG ngân hàng Việt Nam.
+Tóm lại chỉ số EWRI phản ánh phù hợp mức độ rủi ro ESG-washing trên 50 quan sát ngân hàng-năm. Kết quả cho thấy: Hệ thống phân biệt rõ ràng giữa 10 ngân hàng, với khoảng cách EWRI trung bình 9,26 điểm giữa nhóm tốt nhất (NH\_I, 45,96) và kém nhất (NH\_C, 55,22); Thành phần Indeterminate đóng góp đến 98,5\% tổng điểm EWRI, xác nhận đây là nguồn rủi ro washing chính trong báo cáo ESG ngân hàng Việt Nam.
 
 
 % \subsection{Kiểm định độ tin cậy EWRI}

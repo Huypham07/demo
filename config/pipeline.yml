@@ -35,18 +35,18 @@ evidence:
     tfidf_max_features: 3000
     tfidf_ngram_range: [1, 2]
     tfidf_max_df: 0.95
-    nli_contradiction_threshold: 0.5
+    nli_contradiction_threshold: 0.7
 
 ewri:
   action_penalty:
     Implemented: 0.02
     Planning: 0.15
-    Indeterminate: 0.55
+    Indeterminate: 0.90
   evidence_sensitivity:
     Implemented: 1.00
     Planning: 0.85
-    Indeterminate: 0.05
-  contradiction_amplifier: 1.8
+    Indeterminate: 0.50
+  contradiction_amplifier: 1.1
   top_risk_claims: 10
 
 paths:

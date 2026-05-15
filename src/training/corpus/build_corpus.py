@@ -5,10 +5,11 @@ import pandas as pd
 from typing import Optional
 
 try:
-    from underthesea import sent_tokenize
+    from underthesea import sent_tokenize, pos_tag as _ut_pos_tag
     USE_UNDERTHESEA = True
 except Exception:
     USE_UNDERTHESEA = False
+    _ut_pos_tag = None
 
 INPUT_ROOT = Path("data/extracted/raw_ocr_annual_report")
 OUT_BLOCKS = Path("data/corpus/blocks.parquet")
@@ -197,18 +198,54 @@ NOISE_PATTERNS = [
     re.compile(r"^\d{1,3}$"),
 ]
 
-def is_noise_sentence(s: str) -> bool:
+# Compiled once at module level — was inside is_noise_sentence() and recompiled every call
+_VI_VERBS_RE = re.compile(
+    r"\b(là|đã|đang|sẽ|được|có|không|đạt|giảm|tăng|thực hiện|triển khai|"
+    r"xây dựng|phát triển|quản lý|đảm bảo|hỗ trợ|cung cấp|áp dụng|"
+    r"cam kết|ban hành|tuân thủ|tiếp nhận|tư vấn|xử lý|cho|làm|đưa|mở|"
+    r"nâng|đổi|cải|tổ chức|phối hợp|kết hợp|sử dụng|đánh giá|chiếm|"
+    r"đóng góp|thu hút|duy trì|hoàn thành|vượt|ghi nhận)\b",
+    re.IGNORECASE,
+)
+
+# Section types that contain financial/legal/glossary boilerplate rather than ESG claims
+_NOISE_SECTION_KEYWORDS = (
+    "giải thưởng",
+    "danh hiệu",
+    "phụ lục",
+    "từ viết tắt",
+    "chú giải",
+    "bảng chú thích",
+    "rủi ro lãi suất",
+    "rủi ro thanh khoản",
+    "rủi ro tín dụng",
+    "nghĩa vụ nợ tiềm ẩn",
+)
+
+
+def is_noise_sentence(s: str, section_title: str = "") -> bool:
     stripped = s.strip()
 
     if len(stripped) < 15:
         return True
 
-    # All-caps heading/title text (raise threshold to cover short headings)
-    if stripped.isupper() and len(stripped) < 150:
+    if section_title:
+        sec_lower = section_title.lower()
+        if any(kw in sec_lower for kw in _NOISE_SECTION_KEYWORDS):
+            return True
+
+    # All-caps heading / award title.
+    main_text = re.sub(r"\s*\([^)]*\)", "", stripped).strip(" -–—.")
+    if main_text and main_text.isupper() and len(main_text) > 10:
         return True
 
     # List intro phrases — incomplete without the list that follows
     if stripped.endswith(":"):
+        return True
+
+    # Glossary / abbreviation entry: "SBG – Sustainability Bond Guidelines: ..."
+    # uppercase ASCII letters followed by an en/em dash or hyphen then a capital
+    if re.match(r"^[A-Z]{2,8}\s*[–—\-]\s+[A-Z]", stripped):
         return True
 
     # TOC entries: "08 Thông điệp của Chủ tịch", "18 Thông tin chung", etc.
@@ -228,6 +265,24 @@ def is_noise_sentence(s: str) -> bool:
     alpha_ratio = sum(c.isalpha() for c in stripped) / max(len(stripped), 1)
     if alpha_ratio < 0.3:
         return True
+
+    # Fragment starting with dash/bullet
+    if re.match(r"^[\-–—•]\s*", stripped):
+        content = re.sub(r"^[\-–—•\s]+", "", stripped).strip()
+        if len(content) < 40 and not _VI_VERBS_RE.search(content):
+            return True
+
+    if len(stripped) < 50 and not _VI_VERBS_RE.search(stripped):
+        return True
+
+    if USE_UNDERTHESEA and 50 <= len(stripped) < 120 and not _VI_VERBS_RE.search(stripped):
+        try:
+            tags = _ut_pos_tag(stripped)
+            has_verb = any(tag.startswith("V") for _, tag in tags)
+            if not has_verb:
+                return True
+        except Exception:
+            pass
 
     return False
 
@@ -304,7 +359,7 @@ def build_single_document(
 
         sents = sent_split(block_text_clean, block_type=btype)
         sents = [s for s in sents if len(s) >= 10]
-        sents = [s for s in sents if not is_noise_sentence(s)]
+        sents = [s for s in sents if not is_noise_sentence(s, section_title=current_section_title)]
 
         for j, sent in enumerate(sents):
             prev_s = sents[j - 1] if j > 0 else ""
@@ -385,7 +440,7 @@ def build(
 
             sents = sent_split(block_text_clean, block_type=btype)
             sents = [s for s in sents if len(s) >= 10]
-            sents = [s for s in sents if not is_noise_sentence(s)]
+            sents = [s for s in sents if not is_noise_sentence(s, section_title=current_section_title)]
 
             for j, sent in enumerate(sents):
                 prev_s = sents[j - 1] if j > 0 else ""

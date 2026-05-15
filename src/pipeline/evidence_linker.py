@@ -164,11 +164,18 @@ class ClaimEvidenceLinker:
         same_doc_mask = (candidate_df["bank"] == bank) & (candidate_df["year"] == year)
         same_doc_idxs = candidate_df[same_doc_mask].index.tolist()
 
+        claim_block_id = claim_row.get("block_id", None)
+        _has_block_id = "block_id" in candidate_df.columns and claim_block_id is not None
+        if _has_block_id:
+            _block_ids = candidate_df["block_id"].values
+
         candidates_with_boost = []
         seen = set()
 
         # proximity window w
         for idx in same_doc_idxs:
+            if _has_block_id and _block_ids[idx] == claim_block_id:
+                continue
             distance = abs(idx - pos)
             if 0 < distance <= self.window_size:
                 proximity_boost = 1.0 - (distance / (self.window_size + 1)) * self.proximity_decay
@@ -197,10 +204,13 @@ class ClaimEvidenceLinker:
 
                 for doc_pos in top_k_idxs:
                     actual_idx = same_doc_idxs[doc_pos]
-                    if actual_idx != pos and actual_idx not in seen:
-                        tfidf_boost = self.tfidf_boost_floor + tfidf_sims[doc_pos] * self.tfidf_boost_scale
-                        candidates_with_boost.append((actual_idx, tfidf_boost))
-                        seen.add(actual_idx)
+                    if actual_idx == pos or actual_idx in seen:
+                        continue
+                    if _has_block_id and _block_ids[actual_idx] == claim_block_id:
+                        continue
+                    tfidf_boost = self.tfidf_boost_floor + tfidf_sims[doc_pos] * self.tfidf_boost_scale
+                    candidates_with_boost.append((actual_idx, tfidf_boost))
+                    seen.add(actual_idx)
             except Exception:
                 pass
 
@@ -257,7 +267,7 @@ class ClaimEvidenceLinker:
             raw_sim = float(raw_similarities[sort_idx])
             candidate_idx = candidate_idxs[sort_idx]
 
-            if raw_sim < self.similarity_threshold * 0.8:
+            if raw_sim < self.similarity_threshold:
                 continue
 
             evidence_row = _search_df.iloc[candidate_idx]
