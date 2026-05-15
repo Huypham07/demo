@@ -266,6 +266,10 @@ def is_noise_sentence(s: str, section_title: str = "") -> bool:
     if alpha_ratio < 0.3:
         return True
 
+    # Sentence containing a URL → channel list entry, reference, or web link — not a claim
+    if re.search(r"https?://\S+|www\.\S+", stripped):
+        return True
+
     # Fragment starting with dash/bullet
     if re.match(r"^[\-–—•]\s*", stripped):
         content = re.sub(r"^[\-–—•\s]+", "", stripped).strip()
