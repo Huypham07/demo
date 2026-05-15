@@ -72,8 +72,8 @@ def compute_evidence_score(row: pd.Series) -> float:
     if not has_evidence:
         return 0.0
     nli_label = str(row.get("nli_label", "") or "")
-    # Only NLI entailment counts as genuine evidence support
-    return 1.0 if nli_label == "entailment" else 0.0
+    # support = 0 only when no evidence OR contradiction; neutral counts as support
+    return 0.0 if nli_label == "contradiction" else 1.0
 
 def compute_washing_risk(
     action_label: str, evidence_strength: float, nli_label: str = ""

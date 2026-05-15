@@ -122,7 +122,9 @@ GRI_SOCIAL_LABOR_RULES = [
     LabelingRule(
         name="GRI405_Diversity",
         patterns=[
-            r"\b(bình đẳng giới|gender equality|đa dạng|diversity)\b",
+            r"\b(bình đẳng giới|gender equality|diversity)\b",
+            # "đa dạng" alone is too common (product variety, etc.); require ESG context
+            r"\b(đa dạng hóa nhân sự|lực lượng lao động đa dạng|đa dạng về giới|đa dạng và hòa nhập)\b",
             r"\b(nữ giới|female|phụ nữ|women in leadership)\b",
             r"\b(hòa nhập|inclusion|công bằng|equity)\b",
         ],
@@ -185,7 +187,9 @@ GRI_SOCIAL_PRODUCT_RULES = [
     LabelingRule(
         name="GRI418_Privacy",
         patterns=[
-            r"\b(bảo mật|bảo vệ dữ liệu|data protection|privacy)\b",
+            # "bảo mật" alone triggers on "kênh số ổn định, an toàn, bảo mật"; require data/info context
+            r"\b(bảo mật dữ liệu|bảo mật thông tin|data protection|privacy)\b",
+            r"\b(bảo vệ dữ liệu|bảo vệ thông tin khách hàng)\b",
             r"\b(an toàn thông tin|information security|an ninh mạng|cybersecurity)\b",
             r"\b(dữ liệu cá nhân|personal data|pdpa|nddp|nghị định 13|chuẩn pci dss)\b",
         ],
@@ -279,6 +283,8 @@ PLANNING_INDICATORS = LabelingRule(
         r"\b(hướng tới|phấn đấu|đặt mục tiêu|cam kết.*sẽ)\b",
         r"\b(triển khai trong|thực hiện trong giai đoạn)\b",
         r"(đến năm|vào năm|mục tiêu.*?năm)\s*(2025|2026|2027|2028|2029|2030|2050)\b",
+        # "Năm 2025/2030, [bank] triển khai/thực hiện..." — sentence starts with future year
+        r"^năm\s*(2025|2026|2027|2028|2029|2030|2050)[,\s].{0,60}(triển khai|thực hiện|áp dụng|tập trung|định hướng|chiến lược)",
         r"\b(net zero|trung hòa carbon).*?(2030|2040|2050)\b",
         r"(lộ trình|roadmap).*?(2025|2030|2050)",
     ],

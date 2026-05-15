@@ -220,7 +220,30 @@ _NOISE_SECTION_KEYWORDS = (
     "rủi ro thanh khoản",
     "rủi ro tín dụng",
     "nghĩa vụ nợ tiềm ẩn",
+    # Financial notes / legal boilerplate — not ESG claims
+    "giao dịch với các bên liên quan",
+    "thuyết minh báo cáo tài chính",
+    "chính sách kế toán",
+    "giải thích thuật ngữ",
+    "phân loại công cụ tài chính",
+    "chú thích",
 )
+
+# Sentence-level veto patterns: sentences matching any of these are Non_ESG
+# regardless of model output. Each is (pattern, reason).
+_DEFINITIVE_NON_ESG = [
+    # Related-party legal definitions
+    (re.compile(r"(kiểm soát|không kiểm soát).{0,40}(công ty mẹ|công ty con|bên liên quan)", re.I), "related_party_def"),
+    # Board-member biographies: "trên cương vị là X, Bà/Ông đã..."
+    (re.compile(r"(trên cương vị|trên cương vị là|với vai trò là).{0,60}(bà|ông|anh|chị)\b", re.I), "biography"),
+    (re.compile(r"\b(bà|ông)\s+[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐƠƯ][a-zàáâãèéêìíòóôõùúăđơư]+ đã.{0,40}(tổ chức|chỉ đạo|xây dựng|đảm nhận)", re.I), "biography"),
+    # Financial risk definitions (not ESG governance)
+    (re.compile(r"rủi ro (thị trường|lãi suất|ngoại hối|giá cổ phiếu|hàng hóa) bao gồm", re.I), "fin_risk_def"),
+    (re.compile(r"hạn mức giá trị rủi ro ước tính", re.I), "var_def"),
+    # Geopolitical / macro-economic context (not bank's own ESG commitment)
+    (re.compile(r"(xung đột địa chính trị|căng thẳng ở trung đông|chuỗi cung ứng toàn cầu).{0,60}(đe dọa|gián đoạn|cản trở)", re.I), "geopolitical_context"),
+    (re.compile(r"biến đổi khí hậu.{0,60}(cản trở|kìm hãm|gây khó khăn|ảnh hưởng tiêu cực).{0,60}(kinh tế|phục hồi)", re.I), "climate_as_ext_risk"),
+]
 
 
 def is_noise_sentence(s: str, section_title: str = "") -> bool:
@@ -287,6 +310,11 @@ def is_noise_sentence(s: str, section_title: str = "") -> bool:
                 return True
         except Exception:
             pass
+
+    # Definitive non-ESG sentence patterns (biography, legal def, fin-risk def, etc.)
+    for pat, _ in _DEFINITIVE_NON_ESG:
+        if pat.search(stripped):
+            return True
 
     return False
 
@@ -386,7 +414,10 @@ def build_single_document(
                 "section_title": current_section_title,
             })
 
-    return pd.DataFrame(sent_rows)
+    df = pd.DataFrame(sent_rows)
+    # Deduplicate identical sentences within the same document (OCR/layout repeats)
+    df = df.drop_duplicates(subset=["sentence"]).reset_index(drop=True)
+    return df
 
 def build(
     input_path: str | Path | None = None,
