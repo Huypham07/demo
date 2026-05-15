@@ -351,7 +351,7 @@ Implemented & 0{,}02 & 1{,}00 \\
 \hline
 Planning & 0{,}15 & 0{,}85 \\
 \hline
-Indeterminate & 0{,}55 & 0{,}50 \\
+Indeterminate & 0{,}55 & 0{,}05 \\
 \hline
 \end{tabular}
 \end{table}
@@ -362,8 +362,8 @@ Indeterminate & 0{,}55 & 0{,}50 \\
 \begin{equation}
     \text{support}_i =
     \begin{cases}
-        1 & \text{nếu tuyên bố }i\text{ có bằng chứng liên kết và nhãn NLI} \neq \text{contradiction} \\
-        0 & \text{ngược lại (không có bằng chứng hoặc bằng chứng mâu thuẫn)}
+        1 & \text{nếu NLI phán định \textit{entailment} (bằng chứng xác nhận tuyên bố)} \\
+        0 & \text{ngược lại (neutral, contradiction, hoặc không có bằng chứng)}
     \end{cases}
     \label{eq:evidence_strength}
 \end{equation}
@@ -377,9 +377,9 @@ Khi NLI phát hiện mâu thuẫn giữa tuyên bố và bằng chứng, rủi r
 
 Kết quả là ba mức WRS có thứ tự rõ ràng:
 \begin{itemize}
-    \item Entailment: $\text{WRS} = P \times (1 - \lambda)$ \quad --- bằng chứng giảm rủi ro
-    \item Không có bằng chứng: $\text{WRS} = P$ \quad --- rủi ro cơ sở
-    \item Contradiction: $\text{WRS} = P \times 1{,}8$ \quad --- rủi ro khuếch đại
+    \item Entailment ($\text{support}=1$): $\text{WRS} = P \times (1 - \lambda)$ \quad --- bằng chứng xác nhận, rủi ro giảm
+    \item Neutral / không có bằng chứng ($\text{support}=0$): $\text{WRS} = P$ \quad --- rủi ro cơ sở
+    \item Contradiction ($\text{support}=0$, khuếch đại): $\text{WRS} = P \times C = P \times 1{,}8$ \quad --- bằng chứng mâu thuẫn, rủi ro tăng
 \end{itemize}
 
 

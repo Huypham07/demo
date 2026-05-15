@@ -248,7 +248,6 @@ class ESGWashingPipeline:
 
         esg_df = self.actionability_classification(sentences_df)
 
-        # Pass full corpus so linker searches ALL sentences (thesis §3.6.1–3.6.2)
         esg_df = self.evidence_extr(esg_df, evidence_variant=evidence_variant, corpus_df=sentences_df)
         esg_df, df_scores, ewri_scores = self.ewri(esg_df)
 

@@ -154,25 +154,10 @@ class ClaimEvidenceLinker:
         search_df: Optional[pd.DataFrame] = None,
         claim_search_pos: int = -1,
     ) -> List[Tuple[int, float]]:
-        """
-        Find candidate evidence sentences using combined approach:
-        1. Window-based (±window_size) for local context — thesis §3.6.2 eq. proximity_boost
-        2. Document-level TF-IDF pre-filtering for global context — thesis §3.6.2 eq. tfidf_boost
-
-        Args:
-            search_df: When provided (thesis §3.6.2: full corpus), candidates are taken
-                       from this DataFrame instead of df. Indices refer to search_df positions.
-            claim_search_pos: Position of the claim in search_df (for proximity window).
-                              -1 means unknown — falls back to claim_idx in df.
-
-        Returns:
-            List of (candidate_idx_in_search_df, relevance_boost) tuples.
-        """
         claim_row = df.iloc[claim_idx]
         bank = claim_row["bank"]
         year = claim_row["year"]
 
-        # Thesis §3.6.2: candidates come from the full corpus (same bank/year)
         candidate_df = search_df if search_df is not None else df
         pos = claim_search_pos if claim_search_pos >= 0 else claim_idx
 
@@ -182,7 +167,7 @@ class ClaimEvidenceLinker:
         candidates_with_boost = []
         seen = set()
 
-        # Stage 1: proximity window ±w
+        # proximity window w
         for idx in same_doc_idxs:
             distance = abs(idx - pos)
             if 0 < distance <= self.window_size:
@@ -190,7 +175,7 @@ class ClaimEvidenceLinker:
                 candidates_with_boost.append((idx, proximity_boost))
                 seen.add(idx)
 
-        # Stage 2: TF-IDF global expansion when doc has >2w sentences
+        # TF-IDF global expansion when doc has >2w sentences
         if self.document_level and len(same_doc_idxs) > self.window_size * 2:
             doc_key = f"{bank}_{year}"
             doc_texts = candidate_df.loc[same_doc_idxs, text_column].tolist()
@@ -233,12 +218,6 @@ class ClaimEvidenceLinker:
     ) -> ClaimEvidenceLink:
         """
         Link a claim to its top-K supporting evidence, with NLI verification.
-
-        Args:
-            search_df: Full corpus to search candidates in (thesis §3.6.2).
-                       When None, searches within df only.
-            search_embeddings: Embeddings for search_df rows.
-            claim_search_pos: Claim's position in search_df for proximity window.
         """
         claim_row = df.iloc[claim_idx]
         claim_text = claim_row[text_column]

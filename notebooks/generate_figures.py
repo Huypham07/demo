@@ -54,7 +54,7 @@ df_scores["bank_code"] = df_scores["bank"].map(BANK_TO_NH).fillna(df_scores["ban
 # %%
 CORR_COLS = [
     "ewri", "implemented_ratio", "indeterminate_ratio",
-    "planning_ratio", "evidence_ratio",
+    "planning_ratio",
 ]
 cc = [c for c in CORR_COLS if c in df_scores.columns]
 corr = df_scores[cc].corr(method="spearman").round(2)
@@ -94,8 +94,9 @@ bank_avg = (
 overall_mean = bank_avg["mean"].mean()
 
 fig, ax = plt.subplots(figsize=(8, 5))
+p25, p75 = bank_avg["mean"].quantile(0.25), bank_avg["mean"].quantile(0.75)
 colors = [
-    "#28a745" if m < 33 else "#fd7e14" if m < 37 else "#dc3545"
+    "#28a745" if m <= p25 else "#fd7e14" if m <= p75 else "#dc3545"
     for m in bank_avg["mean"]
 ]
 ax.barh(
@@ -110,7 +111,9 @@ ax.axvline(
 ax.set_xlabel("Average EWRI (2020–2024)")
 ax.set_title("Bank Ranking by EWRI")
 ax.legend()
-ax.set_xlim(25, 52)
+xmin = max(0, bank_avg["mean"].min() - bank_avg["std"].max() - 1)
+xmax = bank_avg["mean"].max() + bank_avg["std"].max() + 2
+ax.set_xlim(xmin, xmax)
 plt.tight_layout()
 plt.savefig(FIGURES_DIR / "bank_ranking.png", dpi=150, bbox_inches="tight")
 plt.show()

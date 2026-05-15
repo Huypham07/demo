@@ -45,7 +45,7 @@ ewri:
   evidence_sensitivity:
     Implemented: 1.00
     Planning: 0.85
-    Indeterminate: 0.50
+    Indeterminate: 0.05
   contradiction_amplifier: 1.8
   top_risk_claims: 10
 

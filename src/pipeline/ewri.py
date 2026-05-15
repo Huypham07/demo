@@ -22,6 +22,9 @@ CONTRADICTION_AMPLIFIER = 1.8
 
 ESG_TOPICS = ["E", "S_labor", "S_community", "S_product", "G"]
 
+def configure_from_dict(cfg: Optional[dict]) -> None:
+    configure_ewri(cfg)
+
 def configure_ewri(cfg: Optional[dict]) -> None:
     if not cfg:
         return
@@ -69,9 +72,8 @@ def compute_evidence_score(row: pd.Series) -> float:
     if not has_evidence:
         return 0.0
     nli_label = str(row.get("nli_label", "") or "")
-    if nli_label == "contradiction":
-        return 0.0
-    return 1.0
+    # Only NLI entailment counts as genuine evidence support
+    return 1.0 if nli_label == "entailment" else 0.0
 
 def compute_washing_risk(
     action_label: str, evidence_strength: float, nli_label: str = ""
@@ -150,7 +152,7 @@ def calculate_bank_year_ewri(df: pd.DataFrame) -> list[EWRIScore]:
         plan = int((group["action_label"] == "Planning").sum())
         indet = int((group["action_label"] == "Indeterminate").sum())
 
-        with_ev = int(group["has_evidence"].sum()) if "has_evidence" in group.columns else 0
+        with_ev = int((group["es_combined"] > 0).sum()) if "es_combined" in group.columns else 0
 
         ewri_new = group["wrs"].mean() * 100
 

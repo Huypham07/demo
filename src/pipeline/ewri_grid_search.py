@@ -38,8 +38,8 @@ def run_grid_search(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
            if "nli_label" in df.columns else np.full(len(df), "", dtype=object))
     is_contr = (nli == "contradiction")
 
-    # es = 1 when evidence present and not contradiction
-    es = np.where(has_ev & ~is_contr, 1.0, 0.0).astype(np.float32)
+    # es = 1 only when NLI confirms entailment (genuine evidence support)
+    es = np.where(nli == "entailment", 1.0, 0.0).astype(np.float32)
 
     # valid parameter combinations
     valid_p = _build_valid_combos(
