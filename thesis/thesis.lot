@@ -1,0 +1,18 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces Chiến lược tổng hợp nhãn từ LLM và quy tắc ký hiệu}}{25}{table.caption.18}%
+\contentsline {table}{\numberline {3.2}{\ignorespaces Siêu tham số hàm mất mát ngữ nghĩa}}{26}{table.caption.19}%
+\contentsline {table}{\numberline {3.3}{\ignorespaces Hệ phân cấp chất lượng bằng chứng theo GRI}}{28}{table.caption.20}%
+\contentsline {table}{\numberline {3.4}{\ignorespaces Tham số mức phạt hành động $P_{\text {action}}$ và độ nhạy bằng chứng $\lambda $}}{30}{table.caption.22}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces Quy mô tập dữ liệu huấn luyện, xác thực và kiểm thử.}}{33}{table.caption.24}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces Phân phối nhãn trong tập huấn luyện.}}{34}{table.caption.25}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces Không gian tìm kiếm siêu tham số trong Optuna.}}{34}{table.caption.26}%
+\contentsline {table}{\numberline {4.4}{\ignorespaces Cấu hình siêu tham số huấn luyện.}}{35}{table.caption.27}%
+\contentsline {table}{\numberline {4.5}{\ignorespaces Kết quả phân loại chủ đề ESG trên tập kiểm thử.}}{35}{table.caption.29}%
+\contentsline {table}{\numberline {4.6}{\ignorespaces Kết quả phân loại mức độ hành động trên tập kiểm thử.}}{36}{table.caption.32}%
+\contentsline {table}{\numberline {4.7}{\ignorespaces Phân rã đóng góp EWRI theo thành phần nhãn hành động.}}{39}{table.caption.34}%
+\contentsline {table}{\numberline {4.8}{\ignorespaces Chi tiết xếp hạng ngân hàng theo EWRI trung bình (2020--2024). $\bar {R}_I$: tỉ lệ Implemented; $\bar {R}_{In}$: tỉ lệ Indeterminate; $\bar {R}_E$: tỉ lệ có bằng chứng.}}{41}{table.caption.37}%
+\contentsline {table}{\numberline {4.9}{\ignorespaces Năm ví dụ đại diện minh họa hoạt động pipeline. TBố: tuyên bố; BC: bằng chứng liên kết.}}{43}{table.caption.39}%
+\contentsline {table}{\numberline {A.1}{\ignorespaces Từ khóa phân loại dựa trên Chuẩn GRI và Metadiscourse}}{52}{table.A.1}%

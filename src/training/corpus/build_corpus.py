@@ -267,7 +267,7 @@ def build_single_document(
 
     blocks = repair_ocr_blocks(split_blocks(text))
 
-    # Pass 1: collect block metadata so we can look up adjacent blocks
+    # collect block metadata
     _PROSE = {"paragraph", "kpi_like", "bullet_like"}
     block_metas: list[tuple[str, str]] = []
     for block in blocks:
@@ -275,7 +275,7 @@ def build_single_document(
         btxt = clean_heading(block) if btype in ("heading_like", "meta_heading") else block
         block_metas.append((btype, btxt))
 
-    # Pass 2: create sentence rows with prev/next prose-block context
+    # create sentence rows with prev/next prose-block context
     current_section_title = "UNKNOWN"
     current_section_id = f"{doc_id}_sec0"
     sec_counter = 0

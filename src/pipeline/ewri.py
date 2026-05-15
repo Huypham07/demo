@@ -22,7 +22,7 @@ CONTRADICTION_AMPLIFIER = 1.8
 
 ESG_TOPICS = ["E", "S_labor", "S_community", "S_product", "G"]
 
-def configure_from_dict(cfg: Optional[dict]) -> None:
+def configure_ewri(cfg: Optional[dict]) -> None:
     if not cfg:
         return
     global ACTION_PENALTY, EVIDENCE_SENSITIVITY, CONTRADICTION_AMPLIFIER

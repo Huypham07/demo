@@ -138,49 +138,33 @@ class PropositionalKnowledgeBase:
     
     def _build_action_negation_constraints(self):
         """
-        Build negation constraints specific to actionability.
-        
-        Based on Bloom Taxonomy and Hyland Metadiscourse:
-        - Hedging -> ¬Implemented (hedging indicates lack of concrete action)
-        - Vague commitment -> ¬Implemented
+        Build negation constraints for Implemented label from Indeterminate rules.
+
+        Single source of truth: uses the same ALL_ACTION_RULES["Indeterminate"] patterns
+        as the labeling rules, ensuring training constraints and labeling are consistent.
+
+        Theoretical basis — Hyland (2005) + Florstedt et al. (2025):
+          Hedging, boosting exaggeration, and vague commitment all indicate the
+          absence of concrete completed action, so each fires ¬Implemented.
         """
         if "Implemented" not in self.label_to_idx:
             return
-        
+
         impl_idx = self.label_to_idx["Implemented"]
-        
-        hedging_pred = Predicate(
-            name="hedging_indicator",
-            patterns=[
-                r"\b(luôn|always|hướng tới|towards|nỗ lực|strive|phấn đấu)\b",
-                r"\b(tiên phong|pioneering|dẫn đầu|leading|tinh thần)\b",
-                r"\b(quan tâm|care about|chú trọng|focus on|cam kết|commit)\b",
-            ],
-            source="Hyland (2005) Metadiscourse hedging markers",
-        )
-        self.constraints.append(Constraint(
-            name="hedge_neg_implemented",
-            constraint_type="negation",
-            predicate=hedging_pred,
-            target_label_idx=impl_idx,
-            source="Hyland (2005): hedging -> ¬Implemented",
-        ))
-        
-        vague_pred = Predicate(
-            name="vague_commitment",
-            patterns=[
-                r"\b(nỗ lực|cố gắng|phấn đấu|hướng tới|mong muốn)\b",
-                r"\b(đóng góp vào|góp phần|thúc đẩy|đẩy mạnh)\b",
-            ],
-            source="Vague commitment patterns -> ¬Implemented",
-        )
-        self.constraints.append(Constraint(
-            name="vague_neg_implemented",
-            constraint_type="negation",
-            predicate=vague_pred,
-            target_label_idx=impl_idx,
-            source="Vague commitment -> ¬Implemented",
-        ))
+
+        for rule in ALL_ACTION_RULES.get("Indeterminate", []):
+            pred = Predicate(
+                name=rule.name,
+                patterns=rule.patterns,
+                source=rule.source,
+            )
+            self.constraints.append(Constraint(
+                name=f"neg_{rule.name}_impl",
+                constraint_type="negation",
+                predicate=pred,
+                target_label_idx=impl_idx,
+                source=f"{rule.source} → ¬Implemented",
+            ))
     
     def evaluate_predicates(self, text: str) -> dict[str, float]:
         """

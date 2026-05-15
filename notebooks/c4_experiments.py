@@ -153,7 +153,7 @@ plot_f1_comparison(ACTION_LABELS, report_action_base, report_action_ns,
 # ## 2. RQ2 — So sánh phương pháp liên kết bằng chứng
 
 # %%
-from src.pipeline.evidence_experiments import apply_evidence_variant
+from src.pipeline.evidence_extract import evidence_extract
 
 CORPUS_PATH = ROOT / "data/corpus/actionability_sentences.parquet"
 if not CORPUS_PATH.exists():
@@ -177,7 +177,7 @@ for variant in ["nli", "window", "no_nli"]:
         print(f"[{variant}] loaded from cache")
     else:
         print(f"[{variant}] computing…")
-        df_v = apply_evidence_variant(df_corpus.copy(), variant=variant, config=CFG)
+        df_v = evidence_extract(df_corpus.copy(), variant=variant, config=CFG)
         df_v.to_parquet(cache, index=False)
 
     n_total = len(df_v)

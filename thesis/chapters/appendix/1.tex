@@ -1,0 +1,109 @@
+\appchapter{Mã nguồn chương trình}
+\label{appendix:source_code}
+
+Toàn bộ mã nguồn của hệ thống được công khai tại:
+
+\begin{center}
+    \url{https://github.com/Huypham07/esg-washing}
+\end{center}
+
+Hai mô hình phân loại đã huấn luyện được publish trên HuggingFace và tự động tải về khi chạy pipeline:
+
+\begin{itemize}
+    \item \url{https://huggingface.co/huypham71/esg-topic-classifier}
+    \item \url{https://huggingface.co/huypham71/esg-action-classifier}
+\end{itemize}
+
+\section*{Cấu trúc thư mục}
+
+\begin{verbatim}
+esg-washing/
+├── config/
+│   ├── pipeline.yml          # Tham số pipeline (EWRI, mô hình, ngưỡng)
+│   └── train.yml             # Siêu tham số huấn luyện
+├── data/
+│   ├── extracted/            # Văn bản thô / ZIP source PDF
+│   └── labels/               # Dữ liệu gán nhãn (topic, action)
+├── notebooks/
+│   ├── c4_experiments.py     # Thực nghiệm Chương 4 (RQ1/RQ2/RQ3)
+│   └── train-model.ipynb     # Huấn luyện trên Colab (GPU)
+├── outputs/
+│   └── experiments/          # Kết quả liên kết bằng chứng, Grid Search
+├── src/
+│   ├── pipeline/
+│   │   ├── run.py            # Điểm vào CLI — phân tích một báo cáo
+│   │   ├── pipeline.py       # ESGWashingPipeline (điều phối toàn bộ)
+│   │   ├── document_loader.py    # Tải PDF / TXT, OCR qua Docling
+│   │   ├── evidence_detector.py  # Phát hiện loại bằng chứng (regex)
+│   │   ├── evidence_linker.py    # Liên kết bằng chứng (TF-IDF + SBERT)
+│   │   ├── nli_verifier.py       # Xác minh NLI (mDeBERTa)
+│   │   ├── ewri.py               # Tính WRS và EWRI
+│   │   ├── ewri_grid_search.py   # Grid Search tham số EWRI
+│   │   └── evidence_experiments.py # Thực nghiệm 3 biến thể bằng chứng
+│   └── training/
+│       ├── train_model.py        # Huấn luyện neuro-symbolic / baseline
+│       ├── neuro_symbolic.py     # Semantic loss (exactly-one, impl, neg)
+│       ├── tune_hyperparams.py   # Tối ưu siêu tham số (Optuna)
+│       ├── corpus/
+│       │   └── build_corpus.py   # Tiền xử lý PDF → ngữ liệu câu
+│       └── labeling/
+│           ├── grounded_rules.py     # Bộ quy tắc ký hiệu (GRI/Bloom/Hyland)
+│           ├── topic_llm_labeler.py  # Gán nhãn chủ đề bằng Gemini
+│           └── action_llm_labeler.py # Gán nhãn hành động bằng Gemini
+└── requirements.txt          # Dependencies Python
+\end{verbatim}
+
+\section*{Hướng dẫn chạy}
+
+\subsection*{Cài đặt môi trường}
+
+Yêu cầu Python 3.10 trở lên. Cài đặt dependencies:
+
+\begin{verbatim}
+pip install -r requirements.txt
+\end{verbatim}
+
+\subsection*{1. Phân tích một báo cáo thường niên (Demo)}
+
+\begin{verbatim}
+python -m src.pipeline.run \
+  --input  path/to/annual_report.pdf \
+  --output outputs/demo \
+  --bank   "TEN_NGAN_HANG" \
+  --year   2024
+\end{verbatim}
+
+Kết quả xuất ra thư mục \texttt{outputs/demo/}: tệp \texttt{report.html} (báo cáo HTML gồm điểm EWRI, phân rã thành phần, top-10 câu rủi ro cao nhất), \texttt{enriched.parquet} (dữ liệu mức câu đầy đủ), và \texttt{extracted.txt} (văn bản sau OCR).
+
+\subsection*{2. Huấn luyện mô hình phân loại}
+
+\begin{verbatim}
+# Neuro-Symbolic (có semantic loss)
+python -m src.training.train_model --task topic
+python -m src.training.train_model --task action
+
+# Baseline (không có semantic loss, dùng so sánh RQ1)
+python -m src.training.train_model --task topic  --no-neuro-symbolic
+python -m src.training.train_model --task action --no-neuro-symbolic
+\end{verbatim}
+
+Model được lưu vào \texttt{outputs/models/\{topic,action\}\_classifier/final/}.
+
+\subsection*{3. Liên kết bằng chứng và Grid Search tham số EWRI}
+
+\begin{verbatim}
+# Bước 3a: chạy 3 biến thể liên kết bằng chứng trên toàn corpus
+python -m src.pipeline.evidence_experiments \
+  --input     data/corpus/actionability_sentences.parquet \
+  --output-dir outputs/experiments/evidence
+
+# Bước 3b: Grid Search tham số (P_action, lambda, C)
+python -m src.pipeline.ewri_grid_search \
+  --input       outputs/experiments/evidence/evidence_nli.parquet \
+  --output      outputs/ewri_grid_search_results.csv \
+  --figures-dir thesis/figures
+\end{verbatim}
+
+\subsection*{4. Thực nghiệm Chương 4 (RQ1/RQ2/RQ3)}
+
+Mở \texttt{notebooks/c4\_experiments.py} trong Jupyter hoặc VS~Code (Jupyter mode). Notebook chia thành ba phần tương ứng ba câu hỏi nghiên cứu: RQ1 (đánh giá classifier), RQ2 (so sánh chiến lược bằng chứng), và RQ3 (phân tích EWRI trên 50 quan sát ngân hàng-năm). Biểu đồ được xuất tự động vào \texttt{thesis/figures/}.

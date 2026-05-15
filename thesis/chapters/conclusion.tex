@@ -1,0 +1,31 @@
+\chapter*{Kết luận}
+\addcontentsline{toc}{chapter}{Kết luận}
+
+Khoá luận đã đề xuất và triển khai một quy trình phân tích rủi ro ESG-washing dựa trên NLP, đánh giá khả năng kiểm chứng nội tại của các tuyên bố ESG trong báo cáo thường niên ngân hàng Việt Nam. Quy trình gồm bốn bước chính: phân loại chủ đề ESG và mức độ hành động (sử dụng PhoBERT huấn luyện với ràng buộc neuro-symbolic), liên kết bằng chứng ngữ nghĩa có xác minh NLI, và chỉ số rủi ro EWRI. Nghiên cứu đã trả lời ba câu hỏi nghiên cứu đặt ra với các kết quả chính như sau.
+
+\textbf{RQ1 --- Hiệu quả của phương pháp neuro-symbolic trong phân loại câu ESG.} Tích hợp ràng buộc tri thức ký hiệu vào mô hình PhoBERT thông qua hàm mất mát ngữ nghĩa cải thiện Macro F1 từ 0,758 lên 0,832 cho phân loại chủ đề và từ 0,767 lên 0,821 cho phân loại hành động. Cải thiện lớn nhất đạt được ở các lớp khó và mất cân bằng: lớp Planning tăng F1 từ 0,63 lên 0,70, lớp E (Môi trường) tăng từ 0,73 lên 0,82. Chất lượng phân loại này là nền tảng cho các bước liên kết bằng chứng, tính EWRI sau này.
+
+\textbf{RQ2 --- Hiệu quả của liên kết bằng chứng ngữ nghĩa.} Phương pháp liên kết bằng chứng hai giai đoạn gồm truy xuất ngữ nghĩa và xác minh NLI vượt trội so với các phương pháp cơ sở về chất lượng liên kết. Truy xuất ngữ nghĩa đạt cosine similarity cao hơn cửa sổ ngữ cảnh 11,8\% (0,7249 so với 0,6483). Bước xác minh NLI phát hiện 2,9\% cặp mâu thuẫn và phân biệt được giữa bằng chứng hỗ trợ và bằng chứng trung lập --- khả năng mà phương pháp chỉ dựa trên cosine similarity không làm được. Kết quả cho thấy 75,4\% tuyên bố ESG trong báo cáo thường niên thiếu bằng chứng cụ thể.
+
+\textbf{RQ3 --- Khả năng phân tích của EWRI.} Chỉ số EWRI phân biệt có ý nghĩa giữa 10 ngân hàng, với khoảng cách 10,95 điểm giữa ngân hàng minh bạch nhất (31,77) và kém minh bạch nhất (42,72). Phân rã EWRI cho thấy thành phần Indeterminate đóng góp 98,3\% tổng rủi ro, xác nhận ngôn ngữ mơ hồ là nguồn ESG-washing chính. Về phân tích chủ đề, Quản trị (G) có EWRI cao nhất (36,12) với tỉ lệ Indeterminate 68,4\%, trong khi Môi trường (E) có EWRI thấp nhất (31,22). Phân tích tương quan xác nhận tỉ lệ Indeterminate và Implemented là hai yếu tố quyết định chính của EWRI ($r = 0{,}98$ và $r = -0{,}95$, $p < 0{,}001$), tỉ lệ có bằng chứng hỗ trợ có tương quan âm yếu hơn một chút ($r = -0{,}77$) nhưng cũng chứng tỏ được rằng ngân hàng có tỉ lệ câu được hỗ trợ bằng chứng cao hơn có xu hướng đạt EWRI thấp hơn.
+
+Nghiên cứu mang lại bốn đóng góp chính:
+
+\begin{enumerate}
+    \item \textbf{Khung phương pháp kiểm chứng nội tại.} Đề xuất cách tiếp cận đánh giá ESG-washing dựa trên nội dung báo cáo, kết hợp phân loại hành động, liên kết bằng chứng và xác minh NLI mà không phụ thuộc dữ liệu ESG bên ngoài.
+
+    \item \textbf{Huấn luyện neuro-symbolic cho mô hình phân loại.} Áp dụng semantic loss cùng tri thức miền ESG để huấn luyện mô hình phân loại chủ đề và hành động, cải thiện Macro F1 so với baseline thuần neural và nâng cao chất lượng đầu vào cho các bước phân tích phía sau.
+
+    \item \textbf{Liên kết bằng chứng có xác minh NLI.} Kết hợp truy xuất ngữ nghĩa với suy luận ngôn ngữ tự nhiên trong bước liên kết bằng chứng, giúp phân biệt bằng chứng hỗ trợ, trung lập và mâu thuẫn.
+
+    \item \textbf{Chỉ số EWRI.} Đề xuất chỉ số rủi ro ESG-washing kết hợp tín hiệu hành động và bằng chứng trong một thước đo duy nhất để so sánh mức độ minh bạch giữa các ngân hàng.
+\end{enumerate}
+
+\section*{Hạn chế và hướng phát triển}
+
+Nghiên cứu có một số hạn chế cần lưu ý. Dữ liệu huấn luyện cho các mô hình phân loại còn hạn chế cả về số lượng và chất lượng. Nhãn huấn luyện được tạo thông qua LLM kết hợp bộ luật tri thức ESG mà chưa qua xác nhận của chuyên gia độc lập, có thể gây thiên lệch hệ thống ở các nhãn ranh giới mờ như Planning và Implemented. Mô hình NLI chưa được tinh chỉnh riêng cho tiếng Việt và ngành đặc thù, phạm vi nghiên cứu hiện dừng lại ở 10 ngân hàng thương mại, và quá trình trích xuất dữ liệu qua OCR để lại lỗi mã hóa ký tự tiếng Việt ở một tỉ lệ câu nhất định, ảnh hưởng đến chất lượng phân loại và liên kết bằng chứng. Ngoài ra, công thức EWRI hiện tại tính trung bình rủi ro trên các câu ESG mà chưa xét đến \textit{mật độ ESG} (tỷ lệ câu ESG so với tổng số câu trong báo cáo). Điều này có nghĩa là ngân hàng có thể viết báo cáo rất dài với nội dung Non-ESG trong khi chỉ đưa vào ít câu ESG nhưng cực kỳ ``chắc chắn'', dẫn đến EWRI thấp giả tạo. Hạn chế này cần được giải quyết thông qua hệ số điều chỉnh mật độ ESG trong các nghiên cứu tiếp theo.
+
+Các hướng phát triển tiếp theo bao gồm: (i) tinh chỉnh mô hình NLI trên tập dữ liệu chuyên ngành tài chính tiếng Việt --- ưu tiên kỹ thuật cao nhất; (ii) xây dựng bộ nhãn được xác nhận bởi chuyên gia ESG để nâng cao chất lượng dữ liệu huấn luyện và tối ưu hóa trọng số EWRI; (iii) bổ sung hệ số mật độ ESG (ESG Density Factor) vào công thức EWRI để phạt các báo cáo có tỷ lệ nội dung ESG bất thường thấp so với tổng thể, tránh bị lợi dụng bằng kỹ thuật ``pha loãng'' nội dung; (iv) mở rộng phạm vi sang các lĩnh vực công nghiệp khác ngoài ngân hàng; và (v) đối chiếu chéo tự động với các nguồn dữ liệu bên ngoài (tin tức, báo cáo kiểm toán) để xác minh tính chân thực của các công bố ESG trong báo cáo thường niên.
+
+
+\cleardoublepage

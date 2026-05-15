@@ -130,7 +130,8 @@ class ClaimEvidenceLinker:
         )
         return embeddings
     
-    def _build_tfidf_index(self, texts: List[str], doc_key: str) -> np.ndarray:
+    def _build_tfidf_index(self, texts: List[str], doc_key: str):
+        """Return (tfidf_matrix, vectorizer) for a document, cached by doc_key."""
         if doc_key in self._tfidf_cache:
             return self._tfidf_cache[doc_key]
 
@@ -141,8 +142,8 @@ class ClaimEvidenceLinker:
             max_df=self.tfidf_max_df,
         )
         tfidf_matrix = vectorizer.fit_transform(texts)
-        self._tfidf_cache[doc_key] = tfidf_matrix
-        return tfidf_matrix
+        self._tfidf_cache[doc_key] = (tfidf_matrix, vectorizer)
+        return (tfidf_matrix, vectorizer)
     
     def find_evidence_candidates(
         self,
@@ -150,46 +151,68 @@ class ClaimEvidenceLinker:
         df: pd.DataFrame,
         embeddings: np.ndarray = None,
         text_column: str = "text",
+        search_df: Optional[pd.DataFrame] = None,
+        claim_search_pos: int = -1,
     ) -> List[Tuple[int, float]]:
         """
         Find candidate evidence sentences using combined approach:
-        1. Window-based (+-N) for local context
-        2. Document-level TF-IDF pre-filtering for global context
-        
+        1. Window-based (±window_size) for local context — thesis §3.6.2 eq. proximity_boost
+        2. Document-level TF-IDF pre-filtering for global context — thesis §3.6.2 eq. tfidf_boost
+
+        Args:
+            search_df: When provided (thesis §3.6.2: full corpus), candidates are taken
+                       from this DataFrame instead of df. Indices refer to search_df positions.
+            claim_search_pos: Position of the claim in search_df (for proximity window).
+                              -1 means unknown — falls back to claim_idx in df.
+
         Returns:
-            List of (candidate_idx, relevance_boost) tuples
+            List of (candidate_idx_in_search_df, relevance_boost) tuples.
         """
         claim_row = df.iloc[claim_idx]
         bank = claim_row["bank"]
         year = claim_row["year"]
-        
-        same_doc_mask = (df["bank"] == bank) & (df["year"] == year)
-        same_doc_idxs = df[same_doc_mask].index.tolist()
-        
+
+        # Thesis §3.6.2: candidates come from the full corpus (same bank/year)
+        candidate_df = search_df if search_df is not None else df
+        pos = claim_search_pos if claim_search_pos >= 0 else claim_idx
+
+        same_doc_mask = (candidate_df["bank"] == bank) & (candidate_df["year"] == year)
+        same_doc_idxs = candidate_df[same_doc_mask].index.tolist()
+
         candidates_with_boost = []
         seen = set()
-        
+
+        # Stage 1: proximity window ±w
         for idx in same_doc_idxs:
-            distance = abs(idx - claim_idx)
+            distance = abs(idx - pos)
             if 0 < distance <= self.window_size:
                 proximity_boost = 1.0 - (distance / (self.window_size + 1)) * self.proximity_decay
                 candidates_with_boost.append((idx, proximity_boost))
                 seen.add(idx)
-        
+
+        # Stage 2: TF-IDF global expansion when doc has >2w sentences
         if self.document_level and len(same_doc_idxs) > self.window_size * 2:
             doc_key = f"{bank}_{year}"
-            doc_texts = df.loc[same_doc_idxs, text_column].tolist()
+            doc_texts = candidate_df.loc[same_doc_idxs, text_column].tolist()
 
             try:
-                tfidf_matrix = self._build_tfidf_index(doc_texts, doc_key)
-                claim_doc_pos = same_doc_idxs.index(claim_idx)
-                claim_tfidf = tfidf_matrix[claim_doc_pos]
+                tfidf_matrix, vectorizer = self._build_tfidf_index(doc_texts, doc_key)
+
+                # Locate claim in document TF-IDF matrix
+                if pos in same_doc_idxs:
+                    claim_doc_pos = same_doc_idxs.index(pos)
+                    claim_tfidf = tfidf_matrix[claim_doc_pos]
+                else:
+                    # Claim not in corpus (shouldn't happen) — transform claim text
+                    claim_text = df.iloc[claim_idx][text_column]
+                    claim_tfidf = vectorizer.transform([claim_text])
+
                 tfidf_sims = sklearn_cosine(claim_tfidf, tfidf_matrix).flatten()
                 top_k_idxs = np.argsort(tfidf_sims)[::-1][:self.tfidf_top_k + 1]
 
                 for doc_pos in top_k_idxs:
                     actual_idx = same_doc_idxs[doc_pos]
-                    if actual_idx != claim_idx and actual_idx not in seen:
+                    if actual_idx != pos and actual_idx not in seen:
                         tfidf_boost = self.tfidf_boost_floor + tfidf_sims[doc_pos] * self.tfidf_boost_scale
                         candidates_with_boost.append((actual_idx, tfidf_boost))
                         seen.add(actual_idx)
@@ -204,18 +227,32 @@ class ClaimEvidenceLinker:
         df: pd.DataFrame,
         embeddings: np.ndarray,
         text_column: str = "text",
+        search_df: Optional[pd.DataFrame] = None,
+        search_embeddings: Optional[np.ndarray] = None,
+        claim_search_pos: int = -1,
     ) -> ClaimEvidenceLink:
         """
         Link a claim to its top-K supporting evidence, with NLI verification.
+
+        Args:
+            search_df: Full corpus to search candidates in (thesis §3.6.2).
+                       When None, searches within df only.
+            search_embeddings: Embeddings for search_df rows.
+            claim_search_pos: Claim's position in search_df for proximity window.
         """
         claim_row = df.iloc[claim_idx]
         claim_text = claim_row[text_column]
         claim_emb = embeddings[claim_idx]
-        
+
+        _search_df = search_df if search_df is not None else df
+        _search_embs = search_embeddings if search_embeddings is not None else embeddings
+        _search_pos = claim_search_pos if claim_search_pos >= 0 else claim_idx
+
         candidates_with_boost = self.find_evidence_candidates(
-            claim_idx, df, embeddings, text_column
+            claim_idx, df, embeddings, text_column,
+            search_df=_search_df, claim_search_pos=_search_pos,
         )
-        
+
         if not candidates_with_boost:
             return ClaimEvidenceLink(
                 claim_id=f"{claim_row['bank']}_{claim_row['year']}_{claim_idx}",
@@ -227,30 +264,27 @@ class ClaimEvidenceLinker:
                 similarity_score=0.0,
                 search_method="none",
             )
-        
+
         candidate_idxs = [c[0] for c in candidates_with_boost]
         candidate_boosts = [c[1] for c in candidates_with_boost]
-        
-        candidate_embs = embeddings[candidate_idxs]
-        raw_similarities = sklearn_cosine(
-            claim_emb.reshape(1, -1), candidate_embs
-        )[0]
-        
+
+        candidate_embs = _search_embs[candidate_idxs]
+        raw_similarities = sklearn_cosine(claim_emb.reshape(1, -1), candidate_embs)[0]
+
         boosted_similarities = raw_similarities * np.array(candidate_boosts)
-        
         sorted_indices = np.argsort(boosted_similarities)[::-1]
-        
+
         all_evidence = []
         pre_candidates = []
         for rank, sort_idx in enumerate(sorted_indices[:self.top_k_evidence * 2]):
             sim = float(boosted_similarities[sort_idx])
             raw_sim = float(raw_similarities[sort_idx])
             candidate_idx = candidate_idxs[sort_idx]
-            
+
             if raw_sim < self.similarity_threshold * 0.8:
                 continue
-            
-            evidence_row = df.iloc[candidate_idx]
+
+            evidence_row = _search_df.iloc[candidate_idx]
             evidence_text = evidence_row[text_column]
             evidence_types = evidence_row.get("evidence_types", [])
             if not isinstance(evidence_types, list):
@@ -263,7 +297,7 @@ class ClaimEvidenceLinker:
                 "raw_similarity": round(raw_sim, 4),
                 "boosted_similarity": round(sim, 4),
                 "evidence_types": evidence_types,
-                "is_local": abs(candidate_idx - claim_idx) <= self.window_size,
+                "is_local": abs(candidate_idx - _search_pos) <= self.window_size,
             })
 
         nli_by_rank = {}
@@ -299,10 +333,10 @@ class ClaimEvidenceLinker:
                 "rank": item["rank"],
                 "is_local": item["is_local"],
             })
-            
+
             if len(all_evidence) >= self.top_k_evidence:
                 break
-        
+
         if not all_evidence:
             return ClaimEvidenceLink(
                 claim_id=f"{claim_row['bank']}_{claim_row['year']}_{claim_idx}",
@@ -314,16 +348,16 @@ class ClaimEvidenceLinker:
                 similarity_score=float(max(raw_similarities)) if len(raw_similarities) > 0 else 0.0,
                 search_method="document" if self.document_level else "window",
             )
-        
+
         best = all_evidence[0]
-        
+
         has_global = any(not e["is_local"] for e in all_evidence)
         search_method = "document_window" if has_global else "window"
-        
+
         all_ev_types = set()
         for e in all_evidence:
             all_ev_types.update(e["evidence_types"])
-        
+
         return ClaimEvidenceLink(
             claim_id=f"{claim_row['bank']}_{claim_row['year']}_{claim_idx}",
             claim_text=claim_text,
@@ -346,19 +380,64 @@ class ClaimEvidenceLinker:
         df: pd.DataFrame,
         text_column: str = "text",
         save_embeddings: bool = True,
+        corpus_df: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
-        df = df.reset_index(drop=True)
-        print(f"[EvidenceLinker] Processing {len(df)} sentences...")
+        """
+        Link each claim in df to its best supporting evidence.
 
-        texts = df[text_column].tolist()
-        embeddings = self.embed_sentences(texts)
-        
+        Args:
+            corpus_df: Full document corpus (thesis §3.6.2: "toàn bộ câu trong tài liệu
+                       được biểu diễn thành vector 384 chiều"). When provided, candidates
+                       are searched across all sentences (including Non_ESG), and the
+                       proximity window uses the claim's actual position in the document.
+                       When None, searches within df only (backward-compatible).
+        """
+        df = df.reset_index(drop=True)
+
+        # Thesis §3.6.2: embed ALL sentences in the document for candidate search
+        if corpus_df is not None:
+            search_df = corpus_df.reset_index(drop=True)
+            print(f"[EvidenceLinker] Embedding full corpus ({len(search_df):,} sentences)...")
+            search_texts = search_df[text_column].tolist()
+            search_embeddings = self.embed_sentences(search_texts)
+
+            # Map each claim → its position in the full corpus via sent_id
+            # (preserves document order for proximity window)
+            claim_to_search_pos: Dict[int, int] = {}
+            if "sent_id" in df.columns and "sent_id" in search_df.columns:
+                sid_to_pos = {sid: i for i, sid in enumerate(search_df["sent_id"])}
+                for i, row in df.iterrows():
+                    sid = row.get("sent_id", "")
+                    if sid in sid_to_pos:
+                        claim_to_search_pos[i] = sid_to_pos[sid]
+
+            print(f"[EvidenceLinker] Embedding ESG claims ({len(df):,} sentences)...")
+            claim_texts = df[text_column].tolist()
+            claim_embeddings = self.embed_sentences(claim_texts)
+        else:
+            search_df = None
+            search_embeddings = None
+            claim_to_search_pos = {}
+            print(f"[EvidenceLinker] Processing {len(df):,} sentences...")
+            claim_texts = df[text_column].tolist()
+            claim_embeddings = self.embed_sentences(claim_texts)
+
         if save_embeddings:
-            self._embeddings_cache = embeddings
-        
+            self._embeddings_cache = search_embeddings if search_embeddings is not None else claim_embeddings
+
         results = []
         for idx in range(len(df)):
-            link = self.link_claim_to_evidence(idx, df, embeddings, text_column)
+            search_pos = claim_to_search_pos.get(idx, -1 if corpus_df is not None else idx)
+
+            link = self.link_claim_to_evidence(
+                claim_idx=idx,
+                df=df,
+                embeddings=claim_embeddings,
+                text_column=text_column,
+                search_df=search_df,
+                search_embeddings=search_embeddings,
+                claim_search_pos=search_pos,
+            )
 
             results.append({
                 "claim_id": link.claim_id,
@@ -382,15 +461,15 @@ class ClaimEvidenceLinker:
         found = result_df["evidence_found"].sum()
         print(f"\n[EvidenceLinker] Evidence found: {found}/{len(result_df)} ({100*found/len(result_df):.1f}%)")
         print(f"[EvidenceLinker] Avg similarity: {result_df['similarity_score'].mean():.3f}")
-        
+
         if self.use_nli:
             entails = (result_df["nli_label"] == "entailment").sum()
             print(f"[EvidenceLinker] NLI entailment: {entails}/{found} ({100*entails/max(found,1):.1f}%)")
-        
+
         if self.document_level:
             methods = result_df["search_method"].value_counts()
             print(f"[EvidenceLinker] Search methods: {dict(methods)}")
-        
+
         return result_df
 
 def _linker_kwargs_from_config(config: Optional[dict]) -> Dict:
@@ -421,6 +500,7 @@ def run_linking_variant(
     variant: str = "nli",
     text_column: str = "sentence",
     config: Optional[dict] = None,
+    corpus_df: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     if variant not in EVIDENCE_VARIANTS:
         available = ", ".join(sorted(EVIDENCE_VARIANTS.keys()))
@@ -437,4 +517,10 @@ def run_linking_variant(
         else:
             raise ValueError("Input dataframe must contain either 'sentence' or 'text' column")
 
-    return linker.link_corpus(df, text_column=text_column)
+    # Align corpus_df to the same text column
+    if corpus_df is not None and text_column not in corpus_df.columns:
+        if "sentence" in corpus_df.columns:
+            corpus_df = corpus_df.copy()
+            corpus_df[text_column] = corpus_df["sentence"]
+
+    return linker.link_corpus(df, text_column=text_column, corpus_df=corpus_df)

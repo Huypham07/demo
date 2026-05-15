@@ -25,9 +25,6 @@ def main() -> None:
     parser.add_argument("--output", default="outputs/demo", help="Output directory")
     parser.add_argument("--bank", default="DEMO_BANK", help="Bank name")
     parser.add_argument("--year", type=int, default=2024, help="Reporting year")
-    parser.add_argument("--ocr-mode", default="auto", choices=["auto", "ocr", "no_ocr"])
-    parser.add_argument("--min-chars-per-page", type=int, default=200)
-    parser.add_argument("--config", default="config/pipeline.yml")
     parser.add_argument("--evidence-variant", default="nli", choices=["nli", "window", "no_nli"])
     args = parser.parse_args()
 
@@ -38,16 +35,16 @@ def main() -> None:
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"[1/3] Loading document: {input_path}")
+    print(f"Loading document: {input_path}")
     text, metadata = _read_input(input_path, args.ocr_mode, args.min_chars_per_page)
     extracted_path = output_dir / "extracted.txt"
     extracted_path.write_text(text, encoding="utf-8")
     print(f"      Extracted {len(text):,} chars → {extracted_path}  (mode={metadata.get('mode_used')})")
 
-    print(f"[2/3] Initialising pipeline (config: {args.config})")
-    pipeline = ESGWashingPipeline(config_path=args.config)
+    print(f"Initialising pipeline")
+    pipeline = ESGWashingPipeline()
 
-    print(f"[3/3] Processing {args.bank} {args.year}")
+    print(f"Processing {args.bank} {args.year}")
     result = pipeline.run_single_document(
         text=text,
         bank=args.bank,

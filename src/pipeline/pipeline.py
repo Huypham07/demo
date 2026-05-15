@@ -1,28 +1,45 @@
 import sys
-import yaml
-import pandas as pd
 from pathlib import Path
 from typing import Optional
-from transformers import logging as hf_logging
-hf_logging.disable_progress_bar()
+
+import pandas as pd
+import torch
+import yaml
+from pandas import DataFrame
+from tqdm.auto import tqdm
+from transformers import (
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+    logging as hf_logging,
+)
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.training.corpus.build_corpus import build as build_corpus
-from src.pipeline.evidence_experiments import apply_evidence_variant, run_experiments
+from src.pipeline.demo_report import generate_demo_report
+from src.pipeline.evidence_extract import evidence_extract
 from src.pipeline.ewri import (
-    calculate_bank_year_ewri, scores_to_dataframe, EWRIScore,
-    enrich_with_risk_scores, print_ewri_summary, configure_from_dict as configure_ewri,
+    EWRIScore,
+    calculate_bank_year_ewri,
+    configure_ewri,
+    enrich_with_risk_scores,
+    print_ewri_summary,
+    scores_to_dataframe,
+)
+from src.training.corpus.build_corpus import (
+    build as build_corpus,
+    build_single_document,
 )
 from src.training.neuro_symbolic import SymbolicReasoner
 
-def load_pipeline_config(config_path: str = "config/pipeline.yml") -> dict:
-    with open(config_path, "r", encoding="utf-8") as f:
+hf_logging.disable_progress_bar()
+
+def load_pipeline_config() -> dict:
+    with open("config/pipeline.yml", "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 class ESGWashingPipeline:
-    def __init__(self, config_path: str = "config/pipeline.yml"):
-        self.config = load_pipeline_config(config_path)
+    def __init__(self):
+        self.config = load_pipeline_config()
         configure_ewri(self.config.get("ewri", {}))
         self.reasoner = SymbolicReasoner(
             min_confidence=self.config.get("neuro_symbolic", {}).get("min_rule_confidence", 0.3)
@@ -55,9 +72,6 @@ class ESGWashingPipeline:
         if self._topic_model is not None:
             return
 
-        import torch
-        from transformers import AutoTokenizer, AutoModelForSequenceClassification
-
         model_path = self._resolve_model_path("topic")
         print(f"[Pipeline] Loading topic model: {model_path}")
 
@@ -72,9 +86,6 @@ class ESGWashingPipeline:
     def _load_action_model(self):
         if self._action_model is not None:
             return
-
-        import torch
-        from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
         model_path = self._resolve_model_path("actionability")
         print(f"[Pipeline] Loading actionability model: {model_path}")
@@ -106,9 +117,6 @@ class ESGWashingPipeline:
         print("\n" + "=" * 60)
         print("Topic Classification")
         print("=" * 60)
-
-        import torch
-        from tqdm.auto import tqdm
 
         self._load_topic_model()
 
@@ -149,9 +157,6 @@ class ESGWashingPipeline:
         print("Actionability Classification")
         print("=" * 60)
 
-        import torch
-        from tqdm.auto import tqdm
-
         esg_df = df[df["topic_label"] != "Non_ESG"].copy()
         print(f"ESG sentences: {len(esg_df):,} / {len(df):,}")
 
@@ -188,17 +193,23 @@ class ESGWashingPipeline:
 
         return esg_df
 
-    def evidence_extr(self, df: pd.DataFrame, evidence_variant: str = "nli") -> pd.DataFrame:
+    def evidence_extr(
+        self,
+        df: pd.DataFrame,
+        evidence_variant: str = "nli",
+        corpus_df: Optional[pd.DataFrame] = None,
+    ) -> pd.DataFrame:
         print("\n" + "=" * 60)
         print(f"Evidence Detection + Linking [{evidence_variant}]")
         print("=" * 60)
 
-        df = apply_evidence_variant(df, variant=evidence_variant, config=self.config)
+        df = evidence_extract(df, variant=evidence_variant, config=self.config, corpus_df=corpus_df)
+
         has_ev = int(df["has_evidence"].sum()) if "has_evidence" in df.columns else 0
         print(f"Sentences with evidence: {has_ev:,} / {len(df):,} ({100*has_ev/max(len(df),1):.1f}%)")
         return df
 
-    def ewri(self, df: pd.DataFrame) -> tuple[pd.DataFrame, list[EWRIScore]]:
+    def ewri(self, df: pd.DataFrame) -> tuple[DataFrame, DataFrame, list[EWRIScore]]:
         print("\n" + "=" * 60)
         print("EWRI Calculation")
         print("=" * 60)
@@ -222,9 +233,6 @@ class ESGWashingPipeline:
         evidence_variant: str = "nli",
         metadata: Optional[dict] = None,
     ) -> dict:
-        from src.training.corpus.build_corpus import build_single_document
-        from src.pipeline.demo_report import generate_demo_report
-
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -240,7 +248,8 @@ class ESGWashingPipeline:
 
         esg_df = self.actionability_classification(sentences_df)
 
-        esg_df = self.evidence_extr(esg_df, evidence_variant=evidence_variant)
+        # Pass full corpus so linker searches ALL sentences (thesis §3.6.1–3.6.2)
+        esg_df = self.evidence_extr(esg_df, evidence_variant=evidence_variant, corpus_df=sentences_df)
         esg_df, df_scores, ewri_scores = self.ewri(esg_df)
 
         if not ewri_scores:

@@ -1,0 +1,11 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Kiến trúc Transformer}}{10}{figure.caption.10}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Kiến trúc BERT — Pre-training và Fine-tuning cho các tác vụ downstream}}{11}{figure.caption.11}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces So sánh F1-score bộ phân loại chủ đề ESG theo từng nhãn giữa Baseline và Neuro-Symbolic.}}{36}{figure.caption.30}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces So sánh F1-score bộ phân loại chủ đề ESG theo từng nhãn giữa Baseline và Neuro-Symbolic.}}{37}{figure.caption.33}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Ma trận tương quan giữa EWRI và các thành phần.}}{39}{figure.caption.35}%
+\contentsline {figure}{\numberline {4.4}{\ignorespaces Xếp hạng ngân hàng theo EWRI trung bình (2020--2024). Ngân hàng có EWRI thấp hơn được đánh giá minh bạch ESG tốt hơn.}}{40}{figure.caption.36}%
+\contentsline {figure}{\numberline {4.5}{\ignorespaces Trái: Phân phối chủ đề ESG trong corpus (32.260 câu). Phải: Phân phối nhãn hành động theo từng chủ đề.}}{41}{figure.caption.38}%

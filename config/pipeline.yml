@@ -22,12 +22,6 @@ neuro_symbolic:
   min_rule_confidence: 0.3
 
 evidence:
-  weights:
-    Third_party: 0.35
-    KPI: 0.30
-    Standard: 0.20
-    Time_bound: 0.15
-
   linker:
     window_size: 5
     document_level: true

@@ -1,6 +1,6 @@
 import re
-from dataclasses import dataclass, field
-from typing import List, Optional
+from dataclasses import dataclass
+from typing import List
 
 @dataclass
 class LabelingRule:
@@ -8,13 +8,13 @@ class LabelingRule:
     patterns: List[str]
     source: str
     description: str
-    weight: float = 1.0
+
 
 GRI_ENVIRONMENT_RULES = [
     LabelingRule(
         name="GRI301_Materials",
         patterns=[
-            r"\b(nguyên vật liệu|vật liệu tái chế|tái chế|recycled material)",
+            r"\b(nguyên vật liệu|vật liệu tái chế|tái chế|recycled material)\b",
             r"\b(tiêu thụ nguyên liệu|material consumption)\b",
         ],
         source="GRI 301: Materials 2016",
@@ -132,13 +132,16 @@ GRI_SOCIAL_LABOR_RULES = [
     LabelingRule(
         name="GRI402_LaborRelations",
         patterns=[
-            r"\b(người lao động|CBNV|cán bộ nhân viên|employee)\b",
-            r"\b(quan hệ lao động|labor relations|công đoàn|union)\b",
-            r"\b(môi trường làm việc|work environment|workplace)\b",
-            r"\b(văn hóa doanh nghiệp|corporate culture)\b",
+            # Requires explicit labor relations context, not just any mention of employees
+            r"\b(quan hệ lao động|labor relations|labor.management relations)\b",
+            r"\b(công đoàn|union|tổ chức công đoàn|trade union)\b",
+            r"\b(thỏa ước lao động|collective agreement|thương lượng tập thể)\b",
+            r"\b(môi trường làm việc|work environment|workplace culture)\b",
+            r"\b(văn hóa doanh nghiệp|corporate culture|organizational culture)\b",
+            r"\b(phúc lợi người lao động|employee wellbeing|phúc lợi CBNV)\b",
         ],
         source="GRI 402: Labor/Management Relations 2016",
-        description="Labor relations and work conditions",
+        description="Labor relations, collective agreements, work conditions",
     ),
 ]
 
@@ -152,7 +155,7 @@ GRI_SOCIAL_COMMUNITY_RULES = [
             r"\b(an sinh xã hội|social welfare)\b",
             r"\b(học bổng|scholarship|quỹ xã hội|social fund)\b",
             r"\b(phát triển cộng đồng|community development)\b",
-            r"\b(cứu trợ|relief|hiến máu|blood donation|tài trợ giáo dục|tài trợ y tế)\b"
+            r"\b(cứu trợ|relief|hiến máu|blood donation|tài trợ giáo dục|tài trợ y tế)\b",
         ],
         source="GRI 413: Local Communities 2016",
         description="Community engagement and social programs",
@@ -184,7 +187,7 @@ GRI_SOCIAL_PRODUCT_RULES = [
         patterns=[
             r"\b(bảo mật|bảo vệ dữ liệu|data protection|privacy)\b",
             r"\b(an toàn thông tin|information security|an ninh mạng|cybersecurity)\b",
-            r"\b(dữ liệu cá nhân|personal data|pdpa|nddp|nghị định 13|chuẩn pci dss)\b"
+            r"\b(dữ liệu cá nhân|personal data|pdpa|nddp|nghị định 13|chuẩn pci dss)\b",
         ],
         source="GRI 418: Customer Privacy 2016",
         description="Customer data privacy and security",
@@ -208,7 +211,7 @@ GRI_GOVERNANCE_RULES = [
             r"\b(chống tham nhũng|anti-corruption|liêm chính|integrity)\b",
             r"\b(đạo đức kinh doanh|business ethics|code of conduct)\b",
             r"\b(phòng chống rửa tiền|aml|biết khách hàng là ai|kyc|chống tài trợ khủng bố|cft)\b",
-            r"\b(bảo vệ người tố giác|whistleblower|xung đột lợi ích|conflict of interest)\b"
+            r"\b(bảo vệ người tố giác|whistleblower|xung đột lợi ích|conflict of interest)\b",
         ],
         source="GRI 205: Anti-corruption 2016",
         description="Anti-corruption policies and practices",
@@ -219,7 +222,7 @@ GRI_GOVERNANCE_RULES = [
             r"\b(quản trị công ty|corporate governance)\b",
             r"\b(hội đồng quản trị|board of directors|HĐQT)\b",
             r"\b(minh bạch|transparency|công bố thông tin|disclosure)\b",
-            r"\b(ủy ban esg|esg committee|ban chỉ đạo esg|tích hợp esg|esg integration)\b"
+            r"\b(ủy ban esg|esg committee|ban chỉ đạo esg|tích hợp esg|esg integration)\b",
         ],
         source="GRI 2: General Disclosures 2021",
         description="Corporate governance structure",
@@ -260,10 +263,10 @@ IMPLEMENTED_VERBS = LabelingRule(
 IMPLEMENTED_EVIDENCE = LabelingRule(
     name="Quantitative_Results",
     patterns=[
-        r"(?:đã|năm \d{4}).{0,50}?\d+\s*(?:%|tỷ|triệu|nghìn|tấn|kWh|MWh|CO2|giờ)",
+        r"(?:đã|năm 20\d{2}).{0,50}?\d+\s*(?:%|tỷ|triệu|nghìn|tấn|kWh|MWh|CO2|giờ)",
         r"\d+\s*(%|tỷ|triệu|nghìn|tấn|kWh|MWh).*?(so với|giảm|tăng|đạt)",
-        r"trong năm (2019|2020|2021|2022|2023)\b",
-        r"năm (2019|2020|2021|2022|2023)\b.*?(đạt|hoàn thành|thực hiện)",
+        r"\btrong năm (20\d{2})\b",
+        r"\bnăm (20\d{2})\b.{0,50}?(đạt|hoàn thành|thực hiện)",
     ],
     source="Florstedt, Fahlbusch & Sontheimer (2025) [4] + GRI 'Quantification Principle'",
     description="Quantitative evidence of past performance",
@@ -316,7 +319,7 @@ VAGUE_COMMITMENT = LabelingRule(
         r"\b(phát triển bền vững|trách nhiệm xã hội)\b",
         r"\b(nâng cao nhận thức|nâng cao|cải thiện)\b",
         r"\b(đang nghiên cứu|xem xét|trong quá trình|từng bước)\b",
-        r"\b(chung tay|góp sức|kêu gọi|đồng hành cùng)\b"
+        r"\b(chung tay|góp sức|kêu gọi|đồng hành cùng)\b",
     ],
     source="Florstedt, Fahlbusch & Sontheimer (2025) [4] — 'cheap talk' indicators",
     description="Vague commitment language without actionable specifics",
@@ -336,112 +339,106 @@ ALL_ACTION_RULES = {
     "Indeterminate": [HEDGING_INDICATORS, BOOSTING_INDICATORS, VAGUE_COMMITMENT],
 }
 
+
 def match_topic_grounded(text: str, context: str = "", section: str = "") -> tuple[str, float, list[str]]:
     text_lower = text.lower()
     ctx_lower = (f"{context} {text}").lower() if context else text_lower
-    section_lower = section.lower() if section else ""
-    
+
     scores = {t: 0.0 for t in ALL_TOPIC_RULES}
     matched = {t: [] for t in ALL_TOPIC_RULES}
-    
+
     for topic, rules in ALL_TOPIC_RULES.items():
         for rule in rules:
             for pattern in rule.patterns:
                 if re.search(pattern, text_lower, re.IGNORECASE):
-                    scores[topic] += 0.4 * rule.weight
+                    scores[topic] += 0.4
                     matched[topic].append(rule.name)
                     break
                 elif re.search(pattern, ctx_lower, re.IGNORECASE):
-                    scores[topic] += 0.1 * rule.weight
+                    scores[topic] += 0.1
                     matched[topic].append(f"{rule.name}(ctx)")
                     break
-    
+
     best_topic = max(scores, key=scores.get)
     best_score = scores[best_topic]
-    
+
     if best_score < 0.3:
         return "Non_ESG", 0.5, []
-    
+
     return best_topic, min(best_score, 1.0), matched[best_topic]
 
+
 def match_actionability_grounded(text: str, context: str = "") -> tuple[str, float, list[str]]:
-    """
-    Match actionability using grounded rules (Bloom's Taxonomy + Hedging/Boosting).
-    
-    Returns:
-        (label, confidence, matched_rules) — e.g., ("Implemented", 0.7, ["Bloom_HighLevel_Verbs"])
-    """
     text_lower = text.lower()
     ctx_lower = (f"{context} {text}").lower() if context else text_lower
-    
+
     scores = {label: 0.0 for label in ALL_ACTION_RULES}
     matched = {label: [] for label in ALL_ACTION_RULES}
-    
+
     for label, rules in ALL_ACTION_RULES.items():
         for rule in rules:
             for pattern in rule.patterns:
                 if re.search(pattern, text_lower, re.IGNORECASE):
-                    scores[label] += 0.5 * rule.weight
+                    scores[label] += 0.5
                     matched[label].append(rule.name)
                     break
                 elif re.search(pattern, ctx_lower, re.IGNORECASE):
-                    scores[label] += 0.2 * rule.weight
+                    scores[label] += 0.2
                     matched[label].append(f"{rule.name}(ctx)")
                     break
-    
+
     has_numbers = bool(re.search(r"\d+\s*(%|tỷ|triệu|nghìn|tấn|kg|kWh|MWh)", text_lower))
     has_future_year = bool(re.search(r"(2025|2026|2027|2028|2029|2030|2050)", text_lower))
-    
+
     if has_numbers:
         scores["Indeterminate"] -= 0.3
     if has_future_year:
         scores["Indeterminate"] -= 0.2
         scores["Planning"] += 0.2
-    
+
     best_label = max(scores, key=scores.get)
     best_score = scores[best_label]
-    
+
     if best_score < 0.4:
         return "Indeterminate", 0.3, []
-    
+
     return best_label, min(best_score, 1.0), matched[best_label]
 
+
 def get_rule_provenance() -> dict:
-    """
-    Return a summary of all rules with their academic sources.
-    Useful for thesis methodology section.
-    """
+    """Return all rules with their academic sources. Used for thesis methodology."""
     provenance = {}
-    
+
     for topic, rules in ALL_TOPIC_RULES.items():
         provenance[topic] = [
             {"name": r.name, "source": r.source, "description": r.description, "num_patterns": len(r.patterns)}
             for r in rules
         ]
-    
+
     for label, rules in ALL_ACTION_RULES.items():
         provenance[f"Action_{label}"] = [
             {"name": r.name, "source": r.source, "description": r.description, "num_patterns": len(r.patterns)}
             for r in rules
         ]
-    
+
     return provenance
+
 
 if __name__ == "__main__":
     prov = get_rule_provenance()
     print("=" * 60)
     print("GROUNDED LABELING RULES SUMMARY")
     print("=" * 60)
-    
+
     for category, rules in prov.items():
         print(f"\n--- {category} ---")
         for r in rules:
             print(f"  {r['name']:30s}  ({r['num_patterns']} patterns)  Source: {r['source']}")
-    
+
     print("\n\n" + "=" * 60)
     print("TEST EXAMPLES")
     print("=" * 60)
-    
+
     tests = [
         "Ngân hàng đã giảm phát thải CO2 được 15% so với năm 2022.",
         "Chúng tôi cam kết hướng tới phát triển bền vững.",
@@ -449,10 +446,10 @@ if __name__ == "__main__":
         "Ngân hàng luôn quan tâm, chú trọng đến môi trường làm việc cho CBNV.",
         "Đã triển khai chương trình đào tạo cho 5.000 nhân viên trong năm 2023.",
     ]
-    
+
     for t in tests:
         topic, t_conf, t_rules = match_topic_grounded(t)
         action, a_conf, a_rules = match_actionability_grounded(t)
-        print(f"\n\"{t}...\"")
+        print(f"\n\"{t}\"")
         print(f"  Topic: {topic} (conf={t_conf:.2f}) — {t_rules}")
         print(f"  Action: {action} (conf={a_conf:.2f}) — {a_rules}")

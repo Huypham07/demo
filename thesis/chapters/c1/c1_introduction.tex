@@ -1,0 +1,76 @@
+\chapter{Đặt vấn đề}
+
+\section{Bối cảnh và lý do chọn đề tài}
+Các thông tin được công bố về Môi trường, Xã hội và Quản trị (ESG) đã trở thành một thành phần không thể thiếu trong báo cáo doanh nghiệp, đặc biệt trong lĩnh vực ngân hàng --- nơi các cam kết về phát triển bền vững ngày càng chịu sự giám sát chặt chẽ từ cơ quan quản lý, nhà đầu tư và công chúng \cite{buchetti2025literature, lagasio2024esg}. Các ngân hàng ngày càng dựa vào báo cáo thường niên để truyền tải các sáng kiến môi trường, trách nhiệm xã hội và thực tiễn quản trị \cite{buchetti2025literature}.
+
+Tuy nhiên, song song với sự gia tăng vai trò của ESG trong truyền thông doanh nghiệp, hiện tượng ``ESG-washing'' ngày càng trở nên đáng quan ngại. ESG-washing đề cập đến khoảng cách giữa công bố ESG mang tính biểu tượng và hành động thực chất --- khi doanh nghiệp nhấn mạnh các tuyên bố tích cực về bền vững nhưng thiếu bằng chứng cụ thể, minh bạch và có thể kiểm chứng về hành động thực tế \cite{florstedt2025detecting, marquis2016scrutiny}. Delmas và Burbano~\cite{delmas2011drivers} đã phân loại các cơ chế ESG-washing thành ba dạng chính: công bố chọn lọc (selective disclosure), tuyên bố mơ hồ (vague claims) và tuyên bố sai lệch (false claims). Lyon và Montgomery~\cite{lyon2015means} bổ sung rằng các tuyên bố không được chứng thực (unsubstantiated claims) là cơ chế rửa xanh phổ biến nhất, nhưng lại khó phát hiện nhất vì chúng không chứa thông tin sai sự thật trực tiếp. Các nghiên cứu này đều chỉ ra rằng ESG-washing làm giảm tính minh bạch của thị trường, gây sai lệch quá trình ra quyết định đầu tư và dẫn đến phân bổ vốn kém hiệu quả.
+
+Trong lĩnh vực ngân hàng, những hệ quả này đặc biệt nghiêm trọng do đặc thù hoạt động liên quan trực tiếp đến quản lý rủi ro hệ thống và ổn định tài chính. Khi thông tin ESG bị thổi phồng, tác động tiêu cực có thể lan rộng làm bào mòn uy tín thể chế, tương tự những vụ bê bối tại các quỹ bền vững trong những năm gần đây \cite{lipenkova2023detecting}. Tại Việt Nam, cùng với xu hướng hội nhập quốc tế, các ngân hàng thương mại ngày càng đẩy mạnh báo cáo ESG. Dù vậy, mức độ cụ thể và khả năng kiểm chứng của các phát biểu ESG vẫn không đồng đều, đặt ra yêu cầu cấp thiết về các công cụ phân tích khách quan và tự động.
+
+Các cách tiếp cận hiện nay thường đo lường ESG-washing thông qua đối chiếu tài liệu nội bộ với dữ liệu ESG từ bên thứ ba \cite{su16062571, kathan2025you}, hoặc sử dụng phân tích sắc thái cảm xúc truyền thống \cite{lagasio2024esg}. Những phương pháp này tồn tại nhiều rào cản: (i)~phụ thuộc nguồn dữ liệu bên ngoài khó tiếp cận tại các thị trường mới nổi; (ii)~không kiểm tra tính nhất quán logic giữa tuyên bố và bằng chứng trong cùng tài liệu; và (iii)~không phân biệt mức độ hành động (đã thực hiện, đang lên kế hoạch, hay mơ hồ) của từng phát biểu ESG. Vượt qua những hạn chế đó, nghiên cứu này đề xuất một hướng tiếp cận dựa trên xử lý ngôn ngữ tự nhiên (NLP), đánh giá rủi ro ESG-washing trực tiếp qua khả năng kiểm chứng nội tại trong cùng một bản báo cáo.
+
+
+\section{Mục tiêu và đóng góp của nghiên cứu}
+Xuất phát từ bối cảnh và khoảng trống nêu trên, nghiên cứu này đề xuất một khung phân tích ESG-washing dựa trên NLP kết hợp kiến trúc Neuro-Symbolic \cite{kautz2022third} áp dụng cho báo cáo thường niên ngân hàng. Thay vì đối chiếu với dữ liệu hiệu quả ESG bên ngoài, nghiên cứu tập trung phân tích mức độ mà các phát biểu ESG được hỗ trợ bởi hành động và bằng chứng cụ thể, có thể truy vết ngay trong cùng một tài liệu.
+
+Khung phương pháp tích hợp bốn thành phần chính: (1)~phân loại chủ đề ESG ở mức câu theo các trụ cột E/S/G; (2)~phân loại mức độ hành động Implemented/Planning/Indeterminate) để đánh giá tính cam kết của từng phát biểu; (3)~liên kết bằng chứng hai giai đoạn kết hợp truy xuất ngữ nghĩa và xác minh NLI (Natural Language Inference) để kiểm chứng tuyên bố; và (4)~tính toán EWRI dựa trên công thức tương tác nhân tính ở mức câu, tổng hợp thành điểm rủi ro cho từng ngân hàng theo năm. Hai bước phân loại (1) và (2) sử dụng mô hình PhoBERT kết hợp ràng buộc tri thức ký hiệu thông qua semantic loss \cite{xu2018semantic}, tận dụng tri thức miền từ Bloom Taxonomy \cite{anderson2001taxonomy}, khung metadiscourse \cite{rodina2007metadiscourse} và tiêu chuẩn GRI \cite{gri2021gri}.
+
+
+Nghiên cứu mang lại bốn đóng góp chính:
+\begin{itemize}
+    \item \textbf{Khung phương pháp kiểm chứng nội tại.} Đề xuất cách tiếp cận đánh giá ESG-washing dựa trên nội dung báo cáo, kết hợp phân loại hành động, liên kết bằng chứng và xác minh NLI mà không phụ thuộc dữ liệu ESG bên ngoài.
+    \item \textbf{Huấn luyện neuro-symbolic cho mô hình phân loại.} Áp dụng semantic loss cùng tri thức miền ESG để huấn luyện mô hình phân loại chủ đề và hành động, qua đó nâng cao chất lượng đầu vào cho các bước phân tích phía sau.
+    \item \textbf{Liên kết bằng chứng có xác minh NLI.} Kết hợp truy xuất ngữ nghĩa với suy luận ngôn ngữ tự nhiên trong bước liên kết bằng chứng, giúp phân biệt bằng chứng hỗ trợ, trung lập và mâu thuẫn.
+    \item \textbf{Chỉ số EWRI.} Đề xuất chỉ số rủi ro ESG-washing kết hợp tín hiệu hành động và bằng chứng trong một thước đo duy nhất để so sánh mức độ minh bạch giữa các ngân hàng.
+\end{itemize}
+
+
+\section{Câu hỏi nghiên cứu}
+Xuất phát từ mục tiêu nghiên cứu nêu trên, nghiên cứu đặt ra ba câu hỏi nghiên cứu chính:
+\begin{itemize}
+    \item \textbf{RQ1.} Phương pháp tiếp cận neuro-symbolic --- kết hợp mô hình PhoBERT với ràng buộc tri thức qua hàm mất mát ngữ nghĩa --- có hiệu quả như thế nào trong việc phân loại chủ đề ESG và mức độ hành động trên ngữ liệu báo cáo thường niên tiếng Việt?
+
+    \item \textbf{RQ2.} Phương pháp liên kết bằng chứng dựa trên truy xuất ngữ nghĩa kết hợp xác minh NLI cải thiện khả năng đánh giá tính kiểm chứng của tuyên bố ESG ra sao so với các phương pháp cơ sở dựa trên từ khóa?
+
+    \item \textbf{RQ3.} Chỉ số rủi ro ESG-Washing phản ánh bức tranh hiện trạng, sự khác biệt giữa các ngân hàng, và xu hướng minh bạch tài liệu bền vững của ngành ngân hàng thương mại Việt Nam giai đoạn 2020--2024 như thế nào?
+\end{itemize}
+
+\section{Kết quả đạt được}
+Thực nghiệm được tiến hành trên 32.260 câu ESG trích xuất từ báo cáo thường niên của 10 ngân hàng Việt Nam giai đoạn 2020--2024 (50 quan sát ngân hàng-năm). Các kết quả chính bao gồm:
+\begin{itemize}
+    \item Mô hình phân loại chủ đề ESG và mức độ hành động đạt độ chính xác cao, trong đó tích hợp ràng buộc tri thức ký hiệu cải thiện hiệu quả so với mô hình thuần neural.
+    \item Phương pháp liên kết bằng chứng đề xuất --- kết hợp truy xuất ngữ nghĩa và xác minh NLI --- vượt trội so với các phương pháp cơ sở dựa trên từ khóa trong việc đánh giá mức độ kiểm chứng của tuyên bố ESG.
+    \item Chỉ số EWRI phân biệt có ý nghĩa giữa các ngân hàng (phạm vi điểm \mbox{31,77--42,72}).
+    \item Phân tích xu hướng cho thấy rủi ro ESG-washing có xu hướng giảm dần theo thời gian khi các công bố ngày càng nhấn mạnh các hành động cụ thể, có kiểm chứng.
+\end{itemize}
+
+% Bên cạnh các kết quả thực nghiệm, đóng góp khoa học của nghiên cứu đã được nộp tại Hội nghị khoa học quốc tế \textbf{CITA 2026} (\textit{The 15th Conference on Information Technology and its Applications}), với tiêu đề:
+
+% \begin{quote}
+% \textit{``Analyzing ESG-washing Risk: A case study in Vietnamese Banking Annual Reports''}
+% \end{quote}
+
+% \noindent Bài báo hiện đang trong quá trình bình duyệt.
+
+
+\section{Cấu trúc khóa luận}
+Khóa luận được cấu trúc thành năm phần chính:
+\begin{itemize}
+    \item \textbf{Chương 1: Đặt vấn đề.} Trình bày bối cảnh, lý do nghiên cứu, nhận diện bài toán xử lý, phạm vi và mục tiêu khoa học tổng quát của khóa luận.
+    \item \textbf{Chương 2: Kiến thức cơ sở và tổng quan nghiên cứu.} Trình bày các nền tảng kiến thức bao gồm khung ESG-washing, kiến trúc neuro-symbolic, mô hình ngôn ngữ PhoBERT, NLI, các tiêu chuẩn GRI và các nghiên cứu liên quan.
+    \item \textbf{Chương 3: Phương pháp đề xuất.} Trình bày quy trình kiến trúc pipeline từ đầu vào đến đầu ra, bao gồm thiết lập tri thức luật, huấn luyện mô hình phân loại với semantic loss, liên kết bằng chứng hai giai đoạn, xác minh NLI, và công thức lượng hóa EWRI.
+    \item \textbf{Chương 4: Thực nghiệm và đánh giá.} Mô tả bộ dữ liệu thu thập, các cấu hình và môi trường thực nghiệm, thảo luận về kết quả đạt được. So sánh hiệu quả phân loại, đánh giá pipeline liên kết bằng chứng, và phân tích bức tranh rủi ro ESG-washing toàn cảnh của các ngân hàng.
+    \item \textbf{Kết luận.} Tóm lược các đóng góp khoa học, giới hạn nghiên cứu còn tồn đọng và định hướng mở rộng trong tương lai.
+\end{itemize}
+
+
+
+% Chương này cần trình bày được:
+% \begin{itemize}
+%     \item Bối cảnh và lý do chọn đề tài: Bài toán KLTN giải quyết là gì, trong bối cảnh Khoa học/kỹ thuật/thực tiễn như thế nào? Vì sao đề tài này quan trọng và có ý nghĩa?
+
+%     \item Mô tả bài toán: Phát biểu rõ ràng bài toán mà KLTN giải quyết, gồm đầu vào, đầu ra, phạm vi và các giả định (nếu có)
+
+%     \item Mục tiêu và phạm vi nghiên cứu của KLTN
+%     \item Cấu trúc KLTN
+% \end{itemize}
