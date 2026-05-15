@@ -28,6 +28,7 @@ from src.pipeline.ewri import (
 from src.training.corpus.build_corpus import (
     build as build_corpus,
     build_single_document,
+    is_noise_sentence,
 )
 from src.training.neuro_symbolic import SymbolicReasoner
 
@@ -236,9 +237,20 @@ class ESGWashingPipeline:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        sentences_df = build_single_document(text, bank=bank, year=year)
-        if sentences_df.empty:
+        # Parse once without noise filter → consistent sent_ids for report display
+        all_sentences_df = build_single_document(text, bank=bank, year=year, filter_noise=False)
+        if all_sentences_df.empty:
             raise ValueError("No sentences extracted from document.")
+
+        # Apply noise filter in-place (same IDs preserved)
+        noise_mask = (
+            (all_sentences_df["sentence"].str.len() >= 10) &
+            ~all_sentences_df.apply(
+                lambda r: is_noise_sentence(r["sentence"], section_title=r["section_title"]),
+                axis=1,
+            )
+        )
+        sentences_df = all_sentences_df[noise_mask].copy().reset_index(drop=True)
 
         sentences_df = self.topic_classification(sentences_df)
 
@@ -255,7 +267,7 @@ class ESGWashingPipeline:
             raise ValueError("EWRI calculation produced no results.")
 
         html_path = generate_demo_report(
-            sentences_df=sentences_df,
+            sentences_df=all_sentences_df,
             esg_df=esg_df,
             ewri_score=ewri_scores[0],
             output_dir=output_dir,
@@ -264,6 +276,7 @@ class ESGWashingPipeline:
             metadata=metadata or {},
         )
 
+        all_sentences_df.to_parquet(output_dir / "all_sentences.parquet", index=False)
         esg_df.to_parquet(output_dir / "enriched.parquet", index=False)
 
         return {

@@ -36,3 +36,5 @@ notebooks/.ipynb_checkpoints/
 # Demo run outputs
 outputs/demo/
 outputs/demo_smoketest/
+
+#demo*

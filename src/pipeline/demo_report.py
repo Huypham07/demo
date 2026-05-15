@@ -3,7 +3,6 @@ from __future__ import annotations
 import html
 import json
 import re
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -16,7 +15,6 @@ from src.pipeline.ewri import (
     EWRIScore,
     calculate_topic_entropy,
 )
-from src.training.labeling.grounded_rules import ALL_ACTION_RULES
 
 TOPIC_LABELS_VI = {
     "E": "Môi trường",
@@ -29,14 +27,7 @@ TOPIC_LABELS_VI = {
 
 EVIDENCE_TYPES = ["Third_party", "KPI", "Standard", "Time_bound"]
 
-WASHING_CATEGORY_BY_RULE = {
-    "Hedging_Vagueness":     "Vagueness (rào đón mơ hồ)",
-    "Boosting_Exaggeration": "Cherry-picking (phóng đại)",
-    "Vague_Commitment":      "Vague Commitment (cam kết rỗng)",
-    "Future_Commitment":     "Decoupling (hứa hẹn chưa thực thi)",
-}
-
-# ── HTML template ──────────────────────────────────────────────────────────────
+# ── CSS ───────────────────────────────────────────────────────────────────────
 
 _CSS = """
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -81,17 +72,6 @@ h3 { font-size: 1em; color: #1a1a2e; margin-bottom: 8px; }
 .stat-card .val { font-size: 1.7em; font-weight: 700; color: #e94560; line-height: 1.1; }
 .stat-card .lbl { font-size: 0.8em; color: #666; margin-top: 2px; }
 
-/* ── Note / callout ── */
-.note {
-  background: #fff8e1;
-  border-left: 4px solid #ffc107;
-  padding: 10px 14px;
-  border-radius: 0 6px 6px 0;
-  font-size: 0.88em;
-  color: #555;
-  margin: 14px 0;
-}
-
 /* ── Tables ── */
 .tbl-wrap { overflow-x: auto; margin: 10px 0; }
 table {
@@ -118,139 +98,315 @@ td {
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f8f9fa; }
 
-/* ── Claim cards ── */
-.claim-card {
-  background: #fff;
-  border-radius: 10px;
-  padding: 20px 22px;
-  margin: 18px 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,.07);
-  border-left: 5px solid #dc3545;
-}
-.claim-card.wrs-mid  { border-left-color: #fd7e14; }
-.claim-card.wrs-low  { border-left-color: #ffc107; }
-.claim-header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+/* ── Badge ── */
 .badge {
   display: inline-block;
   padding: 3px 9px;
   border-radius: 20px;
   font-size: 0.8em;
   font-weight: 700;
-  letter-spacing: .02em;
 }
-.b-wrs      { background: #e94560; color: #fff; font-size: 0.95em; }
 .b-indet    { background: #dc3545; color: #fff; }
 .b-planning { background: #fd7e14; color: #fff; }
 .b-impl     { background: #28a745; color: #fff; }
 .b-topic    { background: #6610f2; color: #fff; }
-.b-section  { background: #6c757d; color: #fff; font-size: 0.75em; max-width: 500px;
-              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ── Context block ── */
-.ctx-label {
-  font-size: 0.75em;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: #aaa;
-  margin-bottom: 5px;
+/* ── Document view ── */
+.doc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+  font-size: 0.85em;
 }
-.ctx-wrapper {
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  overflow: hidden;
+.doc-legend strong { margin-right: 6px; color: #444; }
+.leg-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: default;
+  font-size: 0.85em;
+}
+.leg-impl  { background: rgba(40,167,69,.15); border-bottom: 2px solid #28a745; }
+.leg-plan  { background: rgba(253,126,20,.15); border-bottom: 2px solid #fd7e14; }
+.leg-indet { background: rgba(220,53,69,.12); border-bottom: 2px solid #dc3545; }
+.leg-contr { background: rgba(114,28,36,.18); border-bottom: 2px dashed #721c24; }
+
+.doc-body {
+  background: #fff;
+  border-radius: 10px;
+  padding: 24px 28px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.08);
+  line-height: 1.85;
+  font-size: 0.95em;
+}
+.doc-section-title {
+  font-size: 1.05em;
+  font-weight: 700;
+  color: #16213e;
+  border-left: 3px solid #0f3460;
+  padding: 6px 12px;
+  margin: 28px 0 12px;
+  background: #f4f6fb;
+  border-radius: 0 4px 4px 0;
+}
+.doc-block {
   margin-bottom: 12px;
 }
-.ctx-adj {
-  background: #f0f0f0;
-  padding: 9px 14px;
-  font-size: 0.85em;
-  color: #888;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  word-break: break-word;
-  border-bottom: 1px dashed #ccc;
-}
-.ctx-adj.ctx-next { border-bottom: none; border-top: 1px dashed #ccc; }
-.ctx-adj-label {
-  font-size: 0.72em;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: #bbb;
-  margin-bottom: 3px;
-}
-.ctx-block {
-  background: #f8f9fa;
-  border-left: 3px solid #ced4da;
-  padding: 11px 15px;
-  font-size: 0.93em;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.ctx-wrapper .ctx-block { border-left: none; border-left: 3px solid #ced4da; }
-mark.hl-sent {
-  background: #fff3cd;
-  border: 1px solid #ffc107;
+
+/* ── ESG sentence highlights ── */
+.esg-sent {
+  cursor: pointer;
   border-radius: 3px;
-  padding: 1px 3px;
+  padding: 1px 2px;
+  transition: filter .15s;
+  position: relative;
+}
+.esg-sent:hover { filter: brightness(0.88); }
+.esg-impl  { background: rgba(40,167,69,.15); border-bottom: 2px solid #28a745; }
+.esg-plan  { background: rgba(253,126,20,.15); border-bottom: 2px solid #fd7e14; }
+.esg-indet { background: rgba(220,53,69,.12); border-bottom: 2px solid #dc3545; }
+.esg-contr { background: rgba(114,28,36,.18); border-bottom: 2px dashed #721c24; }
+.esg-sent.active { outline: 2px solid #0f3460; outline-offset: 1px; }
+
+/* ── Side panel ── */
+.esg-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 400px;
+  max-width: 95vw;
+  height: 100vh;
+  background: #fff;
+  box-shadow: -6px 0 24px rgba(0,0,0,.18);
+  overflow-y: auto;
+  padding: 0;
+  z-index: 2000;
+  transform: translateX(0);
+  transition: transform .22s cubic-bezier(.4,0,.2,1);
+}
+.esg-panel.hidden { transform: translateX(110%); }
+
+.panel-top {
+  position: sticky;
+  top: 0;
+  background: #16213e;
+  color: #fff;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+}
+.panel-top h4 { font-size: 0.95em; margin: 0; opacity: 0.85; }
+.panel-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.4em;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.75;
+  padding: 0 4px;
+}
+.panel-close:hover { opacity: 1; }
+
+.panel-body { padding: 18px; }
+
+.panel-sentence {
+  font-size: 0.93em;
+  color: #222;
+  line-height: 1.7;
+  padding: 12px 14px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #ccc;
+  margin-bottom: 16px;
+  word-break: break-word;
+}
+
+.panel-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.panel-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.82em;
   font-weight: 700;
 }
 
-/* ── Washing reasons ── */
-.washing-cats { margin-bottom: 8px; }
-.cat-badge {
-  display: inline-block;
-  background: #fff3cd;
-  border: 1px solid #ffc107;
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-size: 0.82em;
-  margin: 3px 3px 3px 0;
+.panel-stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
 }
-.reason-list { list-style: none; padding: 0; margin: 0; }
-.reason-list li {
-  padding: 3px 0 3px 18px;
-  position: relative;
-  font-size: 0.9em;
-  color: #444;
+.panel-stat {
+  background: #f4f6fb;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85em;
 }
-.reason-list li::before { content: "\\2192"; position: absolute; left: 0; color: #aaa; }
+.panel-stat .ps-label { color: #888; font-size: 0.82em; margin-bottom: 2px; }
+.panel-stat .ps-value { font-weight: 700; color: #222; }
 
-/* ── Evidence block ── */
-.ev-block {
+.panel-ev-box {
   background: #e8f4f8;
   border: 1px solid #bee5eb;
-  border-radius: 6px;
-  padding: 11px 14px;
-  margin-top: 12px;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 4px;
 }
-.ev-header {
-  font-weight: 700;
+.panel-ev-label {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: .05em;
   color: #0c5460;
-  font-size: 0.85em;
-  margin-bottom: 6px;
+  font-weight: 700;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.nli { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.8em; font-weight: 700; }
-.nli-contradiction { background: #f8d7da; color: #721c24; }
-.nli-entailment    { background: #d4edda; color: #155724; }
-.nli-neutral       { background: #e2e3e5; color: #383d41; }
-.ev-text { color: #0c5460; font-size: 0.9em; white-space: pre-wrap; word-break: break-word; }
-
-/* ── Positive cards (smaller) ── */
-.pos-card {
-  background: #fff;
-  border-left: 5px solid #28a745;
-  border-radius: 8px;
-  padding: 14px 18px;
-  margin: 12px 0;
-  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+.panel-ev-text {
   font-size: 0.9em;
+  color: #0c5460;
+  line-height: 1.65;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
-.pos-card .pos-sent { font-style: italic; color: #333; margin: 6px 0; }
-.pos-card .pos-ev   { color: #0c5460; font-size: 0.85em; }
+.panel-no-ev {
+  color: #aaa;
+  font-size: 0.88em;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.nli-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.8em;
+  font-weight: 700;
+}
+.nli-entailment    { background: #d4edda; color: #155724; }
+.nli-contradiction { background: #f8d7da; color: #721c24; }
+.nli-neutral       { background: #e2e3e5; color: #383d41; }
+
+/* Backdrop */
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.2);
+  z-index: 1999;
+  display: none;
+}
+.panel-backdrop.visible { display: block; }
 """
+
+# ── JavaScript ────────────────────────────────────────────────────────────────
+
+_JS_TEMPLATE = """
+(function() {
+  var ESG_DATA = %s;
+
+  var panel    = document.getElementById('esg-panel');
+  var backdrop = document.getElementById('panel-backdrop');
+  var pbody    = document.getElementById('esg-panel-body');
+  var activeEl = null;
+
+  function openPanel(sentEl) {
+    var id = sentEl.dataset.id;
+    var d  = ESG_DATA[id];
+    if (!d) return;
+    if (activeEl) activeEl.classList.remove('active');
+    activeEl = sentEl;
+    sentEl.classList.add('active');
+    pbody.innerHTML = buildPanelHTML(d);
+    panel.classList.remove('hidden');
+    backdrop.classList.add('visible');
+  }
+
+  function closePanel() {
+    panel.classList.add('hidden');
+    backdrop.classList.remove('visible');
+    if (activeEl) { activeEl.classList.remove('active'); activeEl = null; }
+  }
+
+  document.getElementById('panel-close-btn').addEventListener('click', closePanel);
+  backdrop.addEventListener('click', closePanel);
+
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('.esg-sent');
+    if (el) { openPanel(el); return; }
+    if (!panel.contains(e.target) && !backdrop.contains(e.target)) {
+      if (!panel.classList.contains('hidden')) closePanel();
+    }
+  });
+
+  var TOPIC_VI = {
+    E: 'Môi trường', S_labor: 'Xã hội – Lao động',
+    S_community: 'Xã hội – Cộng đồng', S_product: 'Xã hội – Sản phẩm', G: 'Quản trị'
+  };
+  var ACTION_COLOR = { Implemented: '#28a745', Planning: '#fd7e14', Indeterminate: '#dc3545' };
+  var NLI_CLS = { entailment: 'nli-entailment', contradiction: 'nli-contradiction', neutral: 'nli-neutral' };
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function buildPanelHTML(d) {
+    var ac = ACTION_COLOR[d.action] || '#666';
+    var nc = NLI_CLS[d.nli_label] || 'nli-neutral';
+    var wrsColor = d.wrs >= 0.5 ? '#dc3545' : d.wrs >= 0.3 ? '#fd7e14' : '#28a745';
+    var topicStr = d.topic + (TOPIC_VI[d.topic] ? ' – ' + TOPIC_VI[d.topic] : '');
+
+    var html = '';
+
+    // Sentence
+    html += '<div class="panel-sentence">' + esc(d.sentence) + '</div>';
+
+    // Badges
+    html += '<div class="panel-badges">';
+    html += '<span class="panel-badge" style="background:' + ac + ';color:#fff">' + esc(d.action) + '</span>';
+    html += '<span class="panel-badge" style="background:#6610f2;color:#fff">' + esc(topicStr) + '</span>';
+    html += '<span class="panel-badge" style="background:' + wrsColor + ';color:#fff">WRS = ' + d.wrs.toFixed(3) + '</span>';
+    html += '</div>';
+
+    // Stats grid
+    html += '<div class="panel-stat-row">';
+    html += '<div class="panel-stat"><div class="ps-label">NLI label</div>';
+    html += '<span class="nli-pill ' + nc + '">' + esc(d.nli_label || '–') + '</span></div>';
+    html += '<div class="panel-stat"><div class="ps-label">NLI score</div>';
+    html += '<div class="ps-value">' + (d.nli_score||0).toFixed(3) + '</div></div>';
+    html += '<div class="panel-stat"><div class="ps-label">Similarity</div>';
+    html += '<div class="ps-value">' + (d.similarity||0).toFixed(3) + '</div></div>';
+    html += '<div class="panel-stat"><div class="ps-label">Topic conf.</div>';
+    html += '<div class="ps-value">' + (d.topic_conf||0).toFixed(3) + '</div></div>';
+    html += '</div>';
+
+    // Evidence
+    html += '<div class="panel-ev-box">';
+    html += '<div class="panel-ev-label">Bằng chứng li\xean kết <span class="nli-pill ' + nc + '">' + esc(d.nli_label||'neutral') + '</span></div>';
+    if (d.evidence) {
+      html += '<div class="panel-ev-text">' + esc(d.evidence) + '</div>';
+    } else {
+      html += '<div class="panel-no-ev">Kh\xf4ng t\xecm được bằng chứng x\xe1c nhận.</div>';
+    }
+    html += '</div>';
+
+    return html;
+  }
+})();
+"""
+
+# ── HTML shell ────────────────────────────────────────────────────────────────
 
 _HTML_HEAD = """<!DOCTYPE html>
 <html lang="vi">
@@ -261,27 +417,28 @@ _HTML_HEAD = """<!DOCTYPE html>
 <style>{css}</style>
 </head>
 <body>
+<div id="panel-backdrop" class="panel-backdrop"></div>
+<div id="esg-panel" class="esg-panel hidden">
+  <div class="panel-top">
+    <h4>Chi tiết c\xe2u ESG</h4>
+    <button id="panel-close-btn" class="panel-close" title="Đ\xf3ng">&times;</button>
+  </div>
+  <div class="panel-body" id="esg-panel-body">
+    <p style="color:#aaa;font-size:.9em">(Click v\xe0o một c\xe2u ESG được t\xf4 m\xe0u trong t\xe0i liệu để xem chi tiết.)</p>
+  </div>
+</div>
 <div class="container">
 """
 
 _HTML_FOOT = "</div></body></html>\n"
 
-
-# ── Helper utilities ───────────────────────────────────────────────────────────
+# ── Helper utilities ──────────────────────────────────────────────────────────
 
 def _h(s: str) -> str:
-    """HTML-escape a string."""
     return html.escape(str(s))
 
 def _fmt_pct(part: float, total: float) -> str:
     return f"{(100 * part / total):.1f}%" if total > 0 else "0.0%"
-
-def _badge(text: str, cls: str) -> str:
-    return f'<span class="badge {cls}">{_h(text)}</span>'
-
-def _nli_badge(label: str) -> str:
-    cls = {"contradiction": "nli-contradiction", "entailment": "nli-entailment"}.get(label, "nli-neutral")
-    return f'<span class="nli {cls}">{_h(label or "neutral")}</span>'
 
 def _table_html(headers: list[str], rows: list[list]) -> str:
     ths = "".join(f"<th>{_h(h)}</th>" for h in headers)
@@ -291,127 +448,182 @@ def _table_html(headers: list[str], rows: list[list]) -> str:
         trs += f"<tr>{tds}</tr>\n"
     return f'<div class="tbl-wrap"><table><thead><tr>{ths}</tr></thead><tbody>{trs}</tbody></table></div>'
 
-def _ctx_with_neighbors(block_text: str, sentence: str,
-                        prev_text: str = "", next_text: str = "") -> str:
-    """Render the three-block context: prev (gray) + current (highlighted) + next (gray)."""
-    has_prev = bool(prev_text and prev_text.strip() and prev_text.strip() != block_text.strip())
-    has_next = bool(next_text and next_text.strip() and next_text.strip() != block_text.strip())
+def _nli_pill(label: str) -> str:
+    cls = {"contradiction": "nli-contradiction", "entailment": "nli-entailment"}.get(label, "nli-neutral")
+    return f'<span class="nli-pill {cls}">{_h(label or "neutral")}</span>'
 
-    if not has_prev and not has_next:
-        # No neighbours — render plain block (existing style)
-        return f'<div class="ctx-block">{_highlight_sentence_in_block(block_text, sentence)}</div>'
+def _sort_key(sent_id: str):
+    m = re.search(r's(\d+)_(\d+)', str(sent_id))
+    return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
 
-    parts = ['<div class="ctx-wrapper">']
-    if has_prev:
-        parts.append(f'<div class="ctx-adj">'
-                     f'<div class="ctx-adj-label">&#9650; Đoạn trước</div>'
-                     f'{_h(prev_text.strip())}</div>')
-    parts.append(f'<div class="ctx-block">{_highlight_sentence_in_block(block_text, sentence)}</div>')
-    if has_next:
-        parts.append(f'<div class="ctx-adj ctx-next">'
-                     f'<div class="ctx-adj-label">&#9660; Đoạn sau</div>'
-                     f'{_h(next_text.strip())}</div>')
-    parts.append('</div>')
+# ── Document view ─────────────────────────────────────────────────────────────
+
+def _build_popup_data(esg_df: pd.DataFrame) -> dict:
+    """Build {sent_id: info_dict} for JS popup."""
+    result = {}
+    for _, row in esg_df.iterrows():
+        sid = str(row.get("sent_id", "") or "")
+        if not sid:
+            continue
+        nli_lbl = str(row.get("nli_label", "") or "neutral")
+        result[sid] = {
+            "sentence":   str(row.get("sentence", "") or ""),
+            "action":     str(row.get("action_label", "") or ""),
+            "topic":      str(row.get("topic_label", "") or ""),
+            "wrs":        float(row.get("wrs", 0) or 0),
+            "nli_label":  nli_lbl,
+            "nli_score":  float(row.get("nli_entailment_score", 0) or 0),
+            "similarity": float(row.get("similarity_score", 0) or 0),
+            "topic_conf": float(row.get("topic_confidence", 0) or 0),
+            "evidence":   str(row.get("best_evidence", "") or "").strip(),
+        }
+    return result
+
+
+def _is_full_document(sentences_df: pd.DataFrame, esg_df: pd.DataFrame) -> bool:
+    """True if sentences_df contains non-ESG sentences (i.e. the full extracted document)."""
+    if "topic_label" not in sentences_df.columns:
+        return False
+    return (sentences_df["topic_label"] == "Non_ESG").any()
+
+
+def _build_document_html(sentences_df: pd.DataFrame, esg_df: pd.DataFrame) -> str:
+    """Reconstruct full document, highlighting ESG sentences."""
+    if not _is_full_document(sentences_df, esg_df):
+        # Only ESG sentences available (saved from old pipeline or regen without all_sentences.parquet)
+        return (
+            '<div style="background:#fff8e1;border-left:4px solid #ffc107;padding:12px 16px;'
+            'border-radius:0 6px 6px 0;font-size:.9em;color:#555;margin-bottom:16px">'
+            '⚠ Toàn văn báo cáo không khả dụng — chỉ có câu ESG được lưu. '
+            'Re-run demo pipeline để xem đầy đủ (pipeline giờ lưu <code>all_sentences.parquet</code>).'
+            '</div>'
+            + _build_esg_only_html(esg_df)
+        )
+
+    # ESG lookup: sent_id -> (action_label, nli_label)
+    esg_info: dict[str, tuple[str, str]] = {}
+    for _, row in esg_df.iterrows():
+        sid = str(row.get("sent_id", "") or "")
+        if sid:
+            action = str(row.get("action_label", "") or "")
+            nli    = str(row.get("nli_label", "") or "")
+            esg_info[sid] = (action, nli)
+
+    # Sort sentences by natural document order
+    df = sentences_df.copy()
+    df["_sort"] = df["sent_id"].apply(_sort_key) if "sent_id" in df.columns else list(range(len(df)))
+    df = df.sort_values("_sort")
+
+    has_section = "section_title" in df.columns
+    has_block   = "block_id"      in df.columns
+
+    parts = []
+    prev_section = None
+    prev_block   = None
+
+    for _, row in df.iterrows():
+        sentence = str(row.get("sentence", "") or "").strip()
+        if not sentence:
+            continue
+        sid      = str(row.get("sent_id", "") or "")
+        section  = str(row.get("section_title", "") if has_section else "")
+        block_id = str(row.get("block_id",      "") if has_block  else "")
+
+        # Section heading
+        if has_section and section != prev_section:
+            if prev_block is not None:
+                parts.append("</div>")
+            prev_block = None
+            if section and section not in ("UNKNOWN", "nan", "None", ""):
+                parts.append(f'<div class="doc-section-title">{_h(section)}</div>')
+            prev_section = section
+
+        # Block paragraph break
+        if has_block and block_id != prev_block:
+            if prev_block is not None:
+                parts.append("</div>")
+            parts.append('<div class="doc-block">')
+            prev_block = block_id
+        elif not has_block and prev_block is None:
+            parts.append('<div class="doc-block">')
+            prev_block = "__single__"
+
+        # Render sentence
+        if sid in esg_info:
+            action, nli = esg_info[sid]
+            if nli == "contradiction":
+                cls = "esg-sent esg-contr"
+            elif action == "Implemented":
+                cls = "esg-sent esg-impl"
+            elif action == "Planning":
+                cls = "esg-sent esg-plan"
+            else:
+                cls = "esg-sent esg-indet"
+            parts.append(
+                f'<span class="{cls}" data-id="{_h(sid)}" tabindex="0">{_h(sentence)}</span> '
+            )
+        else:
+            parts.append(f'<span>{_h(sentence)}</span> ')
+
+    if prev_block is not None:
+        parts.append("</div>")
+
     return "".join(parts)
 
 
-def _highlight_sentence_in_block(block_text: str, sentence: str) -> str:
-    """Return HTML of block_text with the sentence wrapped in a highlight mark."""
-    safe_block = _h(block_text)
-    safe_sent  = _h(sentence)
-    mark_open  = '<mark class="hl-sent">'
-    mark_close = '</mark>'
+def _build_esg_only_html(esg_df: pd.DataFrame) -> str:
+    """Fallback: render only ESG sentences grouped by section/block."""
+    parts = []
+    prev_section = None
+    prev_block   = None
 
-    # 1. Try exact match on the escaped strings (most common case)
-    idx = safe_block.find(safe_sent)
-    if idx >= 0:
-        return safe_block[:idx] + mark_open + safe_sent + mark_close + safe_block[idx + len(safe_sent):]
+    df = esg_df.copy()
+    df["_sort"] = df["sent_id"].apply(_sort_key) if "sent_id" in df.columns else list(range(len(df)))
+    df = df.sort_values("_sort")
 
-    # 2. Try on raw strings (handles cases where escape changed char codes)
-    idx2 = block_text.find(sentence)
-    if idx2 >= 0:
-        return (_h(block_text[:idx2])
-                + mark_open + safe_sent + mark_close
-                + _h(block_text[idx2 + len(sentence):]))
-
-    # 3. Fallback: show block, then annotate sentence separately
-    return safe_block + f'<br>{mark_open}↑ câu được xét: {safe_sent}{mark_close}'
-
-
-def _section_breakdown(esg_df: pd.DataFrame, top_n: int = 10) -> list[list]:
-    if "section_title" not in esg_df.columns:
-        return []
-    rows = []
-    for section, group in esg_df.groupby("section_title"):
-        n = len(group)
-        if n < 3:
+    for _, row in df.iterrows():
+        sentence = str(row.get("sentence", "") or "").strip()
+        if not sentence:
             continue
-        ewri  = float(group["wrs"].mean()) * 100
-        impl  = int((group["action_label"] == "Implemented").sum())
-        plan  = int((group["action_label"] == "Planning").sum())
-        indet = int((group["action_label"] == "Indeterminate").sum())
-        ev    = int(group["has_evidence"].sum()) if "has_evidence" in group.columns else 0
-        rows.append([str(section)[:70], n, f"{ewri:.1f}",
-                     _fmt_pct(indet, n), _fmt_pct(plan, n), _fmt_pct(impl, n), _fmt_pct(ev, n)])
-    rows.sort(key=lambda r: float(r[2]), reverse=True)
-    return rows[:top_n]
+        sid     = str(row.get("sent_id", "") or "")
+        section = str(row.get("section_title", "") or "")
+        bid     = str(row.get("block_id", "") or "")
+        action  = str(row.get("action_label", "") or "")
+        nli     = str(row.get("nli_label", "") or "")
+
+        if section != prev_section:
+            if prev_block is not None:
+                parts.append("</div>")
+            prev_block = None
+            if section and section not in ("UNKNOWN", "nan", "None", ""):
+                parts.append(f'<div class="doc-section-title">{_h(section)}</div>')
+            prev_section = section
+
+        if bid != prev_block:
+            if prev_block is not None:
+                parts.append("</div>")
+            parts.append('<div class="doc-block">')
+            prev_block = bid
+
+        if nli == "contradiction":
+            cls = "esg-sent esg-contr"
+        elif action == "Implemented":
+            cls = "esg-sent esg-impl"
+        elif action == "Planning":
+            cls = "esg-sent esg-plan"
+        else:
+            cls = "esg-sent esg-indet"
+
+        parts.append(
+            f'<span class="{cls}" data-id="{_h(sid)}" tabindex="0">{_h(sentence)}</span> '
+        )
+
+    if prev_block is not None:
+        parts.append("</div>")
+    return "".join(parts)
 
 
-def _explain_washing(
-    sentence: str,
-    action_label: str,
-    has_evidence: bool,
-    nli_label: str,
-    context: str = "",
-) -> dict:
-    text_lower = sentence.lower()
-    ctx_lower  = (f"{context} {sentence}").lower() if context else text_lower
-
-    matched: list[dict] = []
-    for label_target, rules in ALL_ACTION_RULES.items():
-        for rule in rules:
-            kws: list[str] = []
-            for pattern in rule.patterns:
-                hits = re.findall(pattern, ctx_lower, re.IGNORECASE)
-                for h_ in hits:
-                    kw = h_ if isinstance(h_, str) else (h_[0] if h_ else "")
-                    if kw and kw not in kws:
-                        kws.append(kw)
-            if kws:
-                matched.append({"rule": rule.name, "label_target": label_target, "keywords": kws[:5]})
-
-    categories: list[str] = []
-    for m in matched:
-        cat = WASHING_CATEGORY_BY_RULE.get(m["rule"])
-        if cat and cat not in categories:
-            categories.append(cat)
-
-    reasons: list[str] = []
-    if action_label == "Indeterminate" and not categories:
-        categories.append("General Vagueness (mơ hồ chung)")
-        reasons.append("Câu thiếu động từ hành động cụ thể, KPI, hoặc mốc thời gian.")
-    if action_label == "Planning" and not has_evidence:
-        if "Decoupling (hứa hẹn chưa thực thi)" not in categories:
-            categories.append("Decoupling (hứa hẹn chưa thực thi)")
-        reasons.append("Là cam kết tương lai (Planning) nhưng không tìm thấy bằng chứng đi kèm.")
-    if nli_label == "contradiction":
-        categories.append("Contradiction (mâu thuẫn với bằng chứng)")
-        reasons.append("Bằng chứng nội tại của báo cáo phản bác chính tuyên bố này.")
-    if not has_evidence and action_label != "Implemented":
-        reasons.append("Không có bằng chứng (KPI / chứng nhận / mốc thời gian) đi kèm.")
-    for m in matched:
-        cat = WASHING_CATEGORY_BY_RULE.get(m["rule"])
-        if cat:
-            kws_html = ", ".join(f"<code>{_h(k)}</code>" for k in m["keywords"])
-            reasons.append(f'{cat}: từ khoá khớp {kws_html} (rule {_h(m["rule"])}).')
-
-    return {
-        "washing_categories": categories or ["—"],
-        "reasons": reasons or ["Không có dấu hiệu washing rõ ràng."],
-    }
-
-
-# ── Main report generator ──────────────────────────────────────────────────────
+# ── Main report generator ─────────────────────────────────────────────────────
 
 def generate_demo_report(
     sentences_df: pd.DataFrame,
@@ -422,11 +634,11 @@ def generate_demo_report(
     year: int,
     metadata: Optional[dict] = None,
 ) -> Path:
-    """Render an HTML + JSON report for one document. Returns the HTML path."""
+    """Render an HTML report for one document. Returns the HTML path."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    metadata       = metadata or {}
+    metadata        = metadata or {}
     total_sentences = len(sentences_df)
     n_esg   = len(esg_df)
     impl    = int((esg_df["action_label"] == "Implemented").sum())
@@ -438,47 +650,31 @@ def generate_demo_report(
                     for t in ["E", "S_labor", "S_community", "S_product", "G"]}
     entropy = calculate_topic_entropy(topic_counts)
 
-    sent_risks = sorted(ewri_score.sentence_risks, key=lambda r: r.get("washing_risk", 0), reverse=True)
-    top_risk    = sent_risks[:50]
-    positives   = [r for r in sent_risks if r.get("action_label") == "Implemented" and r.get("has_evidence")]
-    positives.sort(key=lambda r: r.get("washing_risk", 0))
-    top_positive = positives[:20]
-
-    # block_text lookups from esg_df (fallback for sentence_risks without block_text)
-    bt_lookup:      dict[str, str] = {}
-    bt_prev_lookup: dict[str, str] = {}
-    bt_next_lookup: dict[str, str] = {}
-    if "sent_id" in esg_df.columns:
-        for _, row in esg_df.iterrows():
-            sid = str(row.get("sent_id", "") or "")
-            if not sid:
-                continue
-            bt_lookup[sid]      = str(row.get("block_text", "")      or "")
-            bt_prev_lookup[sid] = str(row.get("block_prev_text", "") or "")
-            bt_next_lookup[sid] = str(row.get("block_next_text", "") or "")
-
-    # ── Build HTML ─────────────────────────────────────────────────────────────
+    # ── Build HTML ────────────────────────────────────────────────────────────
     parts: list[str] = []
     parts.append(_HTML_HEAD.format(bank=_h(bank), year=year, css=_CSS))
     parts.append(f'<h1>Báo cáo phân tích ESG-Washing &mdash; {_h(bank)} {year}</h1>')
 
-    # 1. Summary
+    # 1. Tóm tắt
     parts.append('<h2>1. Tóm tắt</h2>')
-    char_count = metadata.get("char_count")
     stats = [
         (f"{ewri_score.ewri:.2f} / 100", "EWRI (điểm thô)"),
-        (f"{total_sentences:,}", "Tổng số câu"),
+        (f"{total_sentences:,}",          "Tổng số câu"),
         (f"{n_esg:,} ({_fmt_pct(n_esg, total_sentences)})", "Câu ESG"),
-        (_fmt_pct(n_evidence, n_esg), "Tỷ lệ có evidence"),
-        (f"{entropy:.3f}", "Topic entropy"),
+        (_fmt_pct(n_evidence, n_esg),     "Tỷ lệ có evidence"),
+        (f"{entropy:.3f}",                "Topic entropy"),
     ]
     parts.append('<div class="stat-grid">')
     for val, lbl in stats:
-        parts.append(f'<div class="stat-card"><div class="val">{_h(str(val))}</div>'
-                     f'<div class="lbl">{_h(lbl)}</div></div>')
+        parts.append(
+            f'<div class="stat-card">'
+            f'<div class="val">{_h(str(val))}</div>'
+            f'<div class="lbl">{_h(lbl)}</div>'
+            f'</div>'
+        )
     parts.append('</div>')
 
-    # 2. EWRI decomposition
+    # 2. Phân rã EWRI
     parts.append('<h2>2. Phân rã EWRI theo nhãn hành động</h2>')
     ewri_val = max(ewri_score.ewri, 1e-9)
     parts.append(_table_html(
@@ -496,7 +692,7 @@ def generate_demo_report(
         ],
     ))
 
-    # 3. Topic distribution
+    # 3. Phân phối chủ đề
     parts.append('<h2>3. Phân phối chủ đề ESG</h2>')
     t_rows = []
     for topic in ["E", "S_labor", "S_community", "S_product", "G"]:
@@ -516,7 +712,7 @@ def generate_demo_report(
         t_rows,
     ))
 
-    # 4. Evidence analysis
+    # 4. Phân tích bằng chứng
     parts.append('<h2>4. Phân tích bằng chứng (evidence linking)</h2>')
     parts.append(f'<p>Tỷ lệ câu có evidence: <strong>{_fmt_pct(n_evidence, n_esg)}</strong></p>')
     if "evidence_types" in esg_df.columns:
@@ -544,145 +740,37 @@ def generate_demo_report(
                  for k, v in nli_counts.items()],
             ))
 
-    # 5. Top-50 risk claims
-    parts.append('<h2>5. Top 50 câu rủi ro cao nhất (kèm lý do flagged)</h2>')
-    parts.append('<p style="margin-bottom:12px;font-size:.9em;color:#555">'
-                 'Mỗi câu được phân tích bằng quy tắc ký hiệu (Bloom + Hyland). '
-                 'Câu được xét <mark class="hl-sent">nổi bật màu vàng</mark> trong đoạn văn gốc.</p>')
+    # 5. Toàn văn báo cáo
+    parts.append('<h2>5. Toàn văn báo cáo (câu ESG được tô màu)</h2>')
+    parts.append(
+        '<p style="color:#555;font-size:.88em;margin-bottom:12px">'
+        'Click vào bất kỳ câu nào được tô màu để xem chủ đề, nhãn hành động, '
+        'điểm WRS và bằng chứng liên kết.</p>'
+    )
 
-    explained_top: list[dict] = []
-    for rank, r in enumerate(top_risk):
-        sentence    = str(r.get("sentence", ""))
-        sent_id     = str(r.get("sent_id", ""))
-        action_lbl  = str(r.get("action_label", "?"))
-        topic       = str(r.get("topic", "?"))
-        wrs         = float(r.get("washing_risk", 0))
-        section_ttl = str(r.get("section_title", "") or "")
-        nli_lbl     = str(r.get("nli_label", "") or "")
-        best_ev     = str(r.get("best_evidence", "") or "").strip()
-        # block_text: prefer what's stored in sent_risks, fall back to lookup
-        block_text  = str(r.get("block_text", "") or bt_lookup.get(sent_id, "")).strip()
+    # Legend
+    parts.append(
+        '<div class="doc-legend">'
+        '<strong>Chú thích:</strong>'
+        '<span class="leg-swatch leg-impl">Implemented</span>'
+        '<span class="leg-swatch leg-plan">Planning</span>'
+        '<span class="leg-swatch leg-indet">Indeterminate</span>'
+        '<span class="leg-swatch leg-contr">Contradiction (rủi ro cao nhất)</span>'
+        '</div>'
+    )
 
-        explanation = _explain_washing(
-            sentence=sentence, action_label=action_lbl,
-            has_evidence=bool(r.get("has_evidence", False)), nli_label=nli_lbl,
-        )
+    # Full document
+    parts.append('<div class="doc-body">')
+    parts.append(_build_document_html(sentences_df, esg_df))
+    parts.append('</div>')
 
-        card_cls = "claim-card" + (" wrs-mid" if 0.5 <= wrs < 0.7 else "") + (" wrs-low" if wrs < 0.5 else "")
-        act_cls  = {"Indeterminate": "b-indet", "Planning": "b-planning", "Implemented": "b-impl"}.get(action_lbl, "b-indet")
-
-        parts.append(f'<div class="{card_cls}">')
-        parts.append('<div class="claim-header">')
-        parts.append(f'<span style="font-weight:700;color:#666">#{rank+1}</span>')
-        if section_ttl and section_ttl != "UNKNOWN":
-            parts.append(_badge(f"{section_ttl}", "b-section"))
-        parts.append(_badge(f"WRS = {wrs:.3f}", "b-wrs"))
-        parts.append(_badge(action_lbl, act_cls))
-        parts.append(_badge(f"{topic} – {TOPIC_LABELS_VI.get(topic, topic)}", "b-topic"))
-        if section_ttl and section_ttl != "UNKNOWN":
-            parts.append(_badge(f"{section_ttl}", "b-section"))
-        parts.append('</div>')
-
-        # Context — current block + adjacent blocks from lookup
-        block_prev = str(r.get("block_prev_text", "") or bt_prev_lookup.get(sent_id, "")).strip()
-        block_next = str(r.get("block_next_text", "") or bt_next_lookup.get(sent_id, "")).strip()
-        parts.append('<div class="ctx-label">Ngữ cảnh (đoạn trước / đoạn xét / đoạn sau)</div>')
-        if block_text:
-            parts.append(_ctx_with_neighbors(block_text, sentence, block_prev, block_next))
-        else:
-            parts.append(f'<div class="ctx-block"><mark class="hl-sent">{_h(sentence)}</mark></div>')
-
-        # Washing categories
-        cats_html = "".join(f'<span class="cat-badge">{_h(c)}</span>'
-                            for c in explanation["washing_categories"])
-        parts.append(f'<div class="washing-cats"><strong>Loại washing:</strong> {cats_html}</div>')
-
-        # Reasons
-        reasons_html = "".join(f'<li>{reason}</li>' for reason in explanation["reasons"])
-        parts.append(f'<ul class="reason-list">{reasons_html}</ul>')
-
-        # Evidence
-        if best_ev:
-            parts.append('<div class="ev-block">')
-            parts.append(f'<div class="ev-header">Bằng chứng liên kết {_nli_badge(nli_lbl)}</div>')
-            parts.append(f'<div class="ev-text">{_h(best_ev)}</div>')
-            parts.append('</div>')
-
-        parts.append('</div>')
-        explained_top.append({**r, "explanation": explanation})
-
-    # 6. Positive examples
-    parts.append('<h2>6. Top 20 ví dụ tích cực (Implemented + có evidence)</h2>')
-    if top_positive:
-        for i, r in enumerate(top_positive):
-            sent_id    = str(r.get("sent_id", ""))
-            sentence   = str(r.get("sentence", ""))
-            block_text = str(r.get("block_text", "") or bt_lookup.get(sent_id, "")).strip()
-            block_prev = str(r.get("block_prev_text", "") or bt_prev_lookup.get(sent_id, "")).strip()
-            block_next = str(r.get("block_next_text", "") or bt_next_lookup.get(sent_id, "")).strip()
-            topic      = str(r.get("topic", "?"))
-            best_ev    = str(r.get("best_evidence", "") or "")
-            wrs        = float(r.get("washing_risk", 0))
-
-            parts.append('<div class="pos-card">')
-            parts.append('<div class="claim-header">')
-            parts.append(f'<span style="font-weight:700;color:#666">#{i+1}</span>')
-            parts.append(_badge(f"WRS = {wrs:.3f}", "b-impl"))
-            parts.append(_badge(topic, "b-topic"))
-            parts.append('</div>')
-
-            if block_text:
-                parts.append(_ctx_with_neighbors(block_text, sentence, block_prev, block_next))
-            else:
-                parts.append(f'<div class="pos-sent">{_h(sentence)}</div>')
-
-            if best_ev:
-                parts.append(f'<div class="pos-ev"><strong>Bằng chứng:</strong> {_h(best_ev)}</div>')
-            parts.append('</div>')
-    else:
-        parts.append('<p><em>(không có câu nào)</em></p>')
-
-    # 7. Section breakdown
-    parts.append('<h2>7. Phân tích theo chương / mục báo cáo</h2>')
-    sec_rows = _section_breakdown(esg_df, top_n=50)
-    if sec_rows:
-        parts.append(_table_html(
-            ["Chương / Mục", "Số câu ESG", "EWRI", "Indet %", "Plan %", "Impl %", "Evidence %"],
-            sec_rows,
-        ))
-    else:
-        parts.append('<p><em>(không có dữ liệu section)</em></p>')
+    # JavaScript
+    popup_data = _build_popup_data(esg_df)
+    popup_json = json.dumps(popup_data, ensure_ascii=False, separators=(',', ':'))
+    parts.append(f'<script>{_JS_TEMPLATE % popup_json}</script>')
 
     parts.append(_HTML_FOOT)
 
     html_path = output_dir / "report.html"
     html_path.write_text("".join(parts), encoding="utf-8")
-
-    # JSON sidecar
-    json_payload = {
-        "bank": bank, "year": year, "metadata": metadata,
-        "summary": {
-            "total_sentences": total_sentences, "esg_sentences": n_esg,
-            "ewri_raw": ewri_score.ewri, "topic_entropy": entropy,
-        },
-        "decomposition": {
-            "indeterminate": {"count": indet, "contribution": ewri_score.contribution_indeterminate},
-            "planning":      {"count": plan,  "contribution": ewri_score.contribution_planning},
-            "implemented":   {"count": impl,  "contribution": ewri_score.contribution_implemented},
-        },
-        "evidence": {"with_evidence": n_evidence, "rate": n_evidence / n_esg if n_esg else 0.0},
-        "top_risk_claims": explained_top if explained_top else top_risk,
-        "positive_examples": top_positive,
-        "section_breakdown": sec_rows,
-        "parameters": {
-            "action_penalty": ACTION_PENALTY,
-            "evidence_sensitivity": EVIDENCE_SENSITIVITY,
-            "contradiction_amplifier": CONTRADICTION_AMPLIFIER,
-        },
-    }
-    (output_dir / "report.json").write_text(
-        json.dumps(json_payload, ensure_ascii=False, indent=2, default=str),
-        encoding="utf-8",
-    )
-
     return html_path

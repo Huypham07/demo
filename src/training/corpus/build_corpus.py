@@ -347,6 +347,7 @@ def build_single_document(
     bank: str = "demo",
     year: int = 2024,
     doc_id: Optional[str] = None,
+    filter_noise: bool = True,
 ) -> pd.DataFrame:
     text = normalize_text(text)
     if doc_id is None:
@@ -390,8 +391,11 @@ def build_single_document(
                 break
 
         sents = sent_split(block_text_clean, block_type=btype)
-        sents = [s for s in sents if len(s) >= 10]
-        sents = [s for s in sents if not is_noise_sentence(s, section_title=current_section_title)]
+        if filter_noise:
+            sents = [s for s in sents if len(s) >= 10]
+            sents = [s for s in sents if not is_noise_sentence(s, section_title=current_section_title)]
+        else:
+            sents = [s for s in sents if len(s.strip()) >= 2]
 
         for j, sent in enumerate(sents):
             prev_s = sents[j - 1] if j > 0 else ""
