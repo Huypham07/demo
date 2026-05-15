@@ -150,7 +150,7 @@ class ClaimEvidenceLinker:
         claim_idx: int,
         df: pd.DataFrame,
         embeddings: np.ndarray = None,
-        text_column: str = "text",
+        text_column: str = "sentence",
         search_df: Optional[pd.DataFrame] = None,
         claim_search_pos: int = -1,
     ) -> List[Tuple[int, float]]:
@@ -211,14 +211,11 @@ class ClaimEvidenceLinker:
         claim_idx: int,
         df: pd.DataFrame,
         embeddings: np.ndarray,
-        text_column: str = "text",
+        text_column: str = "sentence",
         search_df: Optional[pd.DataFrame] = None,
         search_embeddings: Optional[np.ndarray] = None,
         claim_search_pos: int = -1,
     ) -> ClaimEvidenceLink:
-        """
-        Link a claim to its top-K supporting evidence, with NLI verification.
-        """
         claim_row = df.iloc[claim_idx]
         claim_text = claim_row[text_column]
         claim_emb = embeddings[claim_idx]
@@ -361,7 +358,7 @@ class ClaimEvidenceLinker:
     def link_corpus(
         self,
         df: pd.DataFrame,
-        text_column: str = "text",
+        text_column: str = "sentence",
         save_embeddings: bool = True,
         corpus_df: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
@@ -490,21 +487,10 @@ def run_linking_variant(
         available = ", ".join(sorted(EVIDENCE_VARIANTS.keys()))
         raise ValueError(f"Unknown evidence variant '{variant}'. Available: {available}")
 
+    if text_column not in df.columns:
+        raise ValueError(f"Column '{text_column}' not found in dataframe. Available: {list(df.columns)}")
+
     cfg = {**EVIDENCE_VARIANTS[variant], **_linker_kwargs_from_config(config)}
     linker = ClaimEvidenceLinker(**cfg)
-
-    if text_column not in df.columns:
-        if "sentence" in df.columns:
-            text_column = "sentence"
-        elif "text" in df.columns:
-            text_column = "text"
-        else:
-            raise ValueError("Input dataframe must contain either 'sentence' or 'text' column")
-
-    # Align corpus_df to the same text column
-    if corpus_df is not None and text_column not in corpus_df.columns:
-        if "sentence" in corpus_df.columns:
-            corpus_df = corpus_df.copy()
-            corpus_df[text_column] = corpus_df["sentence"]
 
     return linker.link_corpus(df, text_column=text_column, corpus_df=corpus_df)

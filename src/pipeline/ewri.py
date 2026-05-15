@@ -178,7 +178,7 @@ def calculate_bank_year_ewri(df: pd.DataFrame) -> list[EWRIScore]:
         for _, row in group.iterrows():
             sent_risks.append({
                 "sent_id": row.get("sent_id", ""),
-                "sentence": str(row.get("sentence", row.get("text", ""))),
+                "sentence": str(row.get("sentence", "")),
                 "block_text": str(row.get("block_text", "")),
                 "block_prev_text": str(row.get("block_prev_text", "")),
                 "block_next_text": str(row.get("block_next_text", "")),

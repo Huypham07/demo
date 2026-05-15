@@ -15,14 +15,9 @@ def evidence_extract(
     corpus_df: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     df = df.copy()
-    if "text" not in df.columns and "sentence" in df.columns:
-        df["text"] = df["sentence"]
 
     if corpus_df is not None:
         corpus_df = corpus_df.copy()
-        if "text" not in corpus_df.columns and "sentence" in corpus_df.columns:
-            corpus_df["text"] = corpus_df["sentence"]
-
         corpus_df = detect_evidence(corpus_df)
 
         ev_lookup = corpus_df.set_index("sent_id")[["evidence_types", "kpi_values"]]
@@ -35,7 +30,7 @@ def evidence_extract(
         df = detect_evidence(df)
 
     links_df = run_linking_variant(
-        df, variant=variant, text_column="text", config=config, corpus_df=corpus_df
+        df, variant=variant, text_column="sentence", config=config, corpus_df=corpus_df
     )
 
     df["has_evidence"] = links_df["evidence_found"].values
