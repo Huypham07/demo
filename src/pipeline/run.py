@@ -10,12 +10,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.pipeline.pipeline import ESGWashingPipeline
 
 
-def _read_input(path: Path, ocr_mode: str, min_chars_per_page: int) -> tuple[str, dict]:
+def _read_input(path: Path, min_chars_per_page: int) -> tuple[str, dict]:
     if path.suffix.lower() in {".txt", ".md"}:
         text = path.read_text(encoding="utf-8", errors="ignore")
         return text, {"mode_used": "text_input", "page_count": 0, "char_count": len(text)}
     from src.pipeline.document_loader import load_pdf_with_docling
-    out = load_pdf_with_docling(path, mode=ocr_mode, min_chars_per_page=min_chars_per_page)
+    out = load_pdf_with_docling(path, min_chars_per_page=min_chars_per_page)
     return out["text"], {k: v for k, v in out.items() if k != "text"}
 
 
@@ -36,7 +36,7 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Loading document: {input_path}")
-    text, metadata = _read_input(input_path, args.ocr_mode, args.min_chars_per_page)
+    text, metadata = _read_input(input_path, args.min_chars_per_page)
     extracted_path = output_dir / "extracted.txt"
     extracted_path.write_text(text, encoding="utf-8")
     print(f"      Extracted {len(text):,} chars → {extracted_path}  (mode={metadata.get('mode_used')})")
