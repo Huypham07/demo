@@ -44,15 +44,18 @@ with open("config/pipeline.yml") as f:
     CFG = yaml.safe_load(f)
 
 def main() -> None:
-    CORPUS_PATH = Path("data/corpus/actionability_sentences.parquet")
-    if not CORPUS_PATH.exists():
+    ACTION_PATH = Path("data/corpus/actionability_sentences.parquet")
+    CORPUS_PATH = Path("data/corpus/sentences.parquet")
+    if not ACTION_PATH.exists():
         raise FileNotFoundError(
-            f"{CORPUS_PATH} không tồn tại.\n"
+            f"{ACTION_PATH} không tồn tại.\n"
             "Chạy phần Phụ lục ở cuối notebook trước."
         )
 
     df_corpus = pd.read_parquet(CORPUS_PATH)
-    print(f"Corpus: {len(df_corpus):,} ESG sentences")
+    df = pd.read_parquet(ACTION_PATH)
+
+    print(f"Corpus: {len(df):,} ESG sentences")
 
     OUT_EV = Path("outputs/experiments/evidence")
     OUT_EV.mkdir(parents=True, exist_ok=True)
@@ -61,10 +64,10 @@ def main() -> None:
         cache = OUT_EV / f"evidence_{variant}.parquet"
         if cache.exists():
             df_v = pd.read_parquet(cache)
-            print(f"[{variant}] loaded from cache")
+            print(f"[{variant}] loaded")
         else:
             print(f"[{variant}] computing…")
-            df_v = evidence_extract(df_corpus.copy(), variant=variant, config=CFG)
+            df_v = evidence_extract(df.copy(), variant=variant, config=CFG, corpus_df=df_corpus)
             df_v.to_parquet(cache, index=False)
 
         n_total = len(df_v)
