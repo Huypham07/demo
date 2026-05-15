@@ -64,7 +64,7 @@ def main() -> None:
     OUT_EV = Path("outputs/experiments/evidence")
     OUT_EV.mkdir(parents=True, exist_ok=True)
     rq2 = {}
-    for variant in ["window", "no_nli"]:
+    for variant in ["nli", "window", "no_nli"]:
         cache = OUT_EV / f"evidence_{variant}.parquet"
         if cache.exists():
             df_v = pd.read_parquet(cache)
