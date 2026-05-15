@@ -39,14 +39,14 @@ evidence:
 
 ewri:
   action_penalty:
-    Implemented: 0.02
-    Planning: 0.15
-    Indeterminate: 0.90
+    Implemented: 0.20
+    Planning: 0.25
+    Indeterminate: 0.40
   evidence_sensitivity:
-    Implemented: 1.00
-    Planning: 0.85
-    Indeterminate: 0.50
-  contradiction_amplifier: 1.1
+    Implemented: 0.85
+    Planning: 0.80
+    Indeterminate: 0.05
+  contradiction_amplifier: 1.8
   top_risk_claims: 10
 
 paths:

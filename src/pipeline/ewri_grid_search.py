@@ -29,19 +29,45 @@ def _build_valid_combos(grids: dict, ordering_check) -> list[dict]:
     return [c for c in combos if ordering_check(c)]
 
 
+def _kendall_w_batch(ewri_matrix: np.ndarray) -> np.ndarray:
+    """
+    Compute Kendall's W (coefficient of concordance) for each parameter combo.
+
+    ewri_matrix : (n_combos, n_banks, n_years)
+        EWRI score for each combo, bank, and year.
+
+    Returns W : (n_combos,) in [0, 1].
+        W = 1 → perfect agreement in bank rankings across years.
+        W = 0 → no concordance.
+
+    Objective rationale: if EWRI captures stable institutional ESG-washing
+    characteristics, bank rankings should be consistent across reporting years.
+    This criterion has a genuine interior optimum — parameters too small collapse
+    all scores toward zero (rankings become noisy); parameters too large amplify
+    random variation rather than systematic bank differences.
+    """
+    n_combos, n_banks, n_years = ewri_matrix.shape
+    if n_banks < 2 or n_years < 2:
+        return np.zeros(n_combos, dtype=np.float32)
+
+    # Rank banks within each year (axis=1 = bank axis). Double argsort → ordinal rank.
+    ranks = np.argsort(np.argsort(ewri_matrix, axis=1), axis=1).astype(np.float64) + 1
+
+    # R[combo, bank] = sum of ranks across all years
+    R = ranks.sum(axis=2)                          # (n_combos, n_banks)
+    R_mean = n_years * (n_banks + 1) / 2
+    S = ((R - R_mean) ** 2).sum(axis=1)            # (n_combos,)
+    W = 12.0 * S / (n_years ** 2 * (n_banks ** 3 - n_banks))
+    return W.astype(np.float32)
+
+
 def run_grid_search(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
-    # input
     actions = df["action_label"].astype(str).to_numpy()
-    has_ev = (df["has_evidence"].astype(bool).to_numpy()
-              if "has_evidence" in df.columns else np.zeros(len(df), dtype=bool))
     nli = (df["nli_label"].astype(str).to_numpy()
            if "nli_label" in df.columns else np.full(len(df), "", dtype=object))
     is_contr = (nli == "contradiction")
-
-    # es = 1 only when NLI confirms entailment (genuine evidence support)
     es = np.where(nli == "entailment", 1.0, 0.0).astype(np.float32)
 
-    # valid parameter combinations
     valid_p = _build_valid_combos(
         P_ACTION_GRIDS,
         lambda c: c["Implemented"] < c["Planning"] < c["Indeterminate"],
@@ -52,74 +78,80 @@ def run_grid_search(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     )
     n_p, n_l = len(valid_p), len(valid_l)
     print(f"P combos: {n_p}  |  L combos: {n_l}  |  C values: {len(C_GRIDS)}")
-    print(f"Max combinations: {n_p * n_l * len(C_GRIDS):,}  (WRS-bound filter applied per C)")
+    print(f"Total combinations: {n_p * n_l * len(C_GRIDS):,}  (WRS-bound filter: P_indet × C ≤ 1)")
 
-    mask = np.column_stack([
-        (actions == k).astype(np.float32) for k in _ACTION_KEYS
-    ])
-
-    # P_mat[i, :] = p_arr for i P combo  ->  shape (n_p, n_sentences)
+    mask = np.column_stack([(actions == k).astype(np.float32) for k in _ACTION_KEYS])
     P_vals = np.array([[p[k] for k in _ACTION_KEYS] for p in valid_p], dtype=np.float32)
-    P_mat = P_vals @ mask.T # (n_p, n_sentences)
-
-    # L_mat[j, :] = L_arr for j L combo  ->  shape (n_l, n_sentences)
+    P_mat = P_vals @ mask.T   # (n_p, n_sentences)
     L_vals = np.array([[l[k] for k in _ACTION_KEYS] for l in valid_l], dtype=np.float32)
-    L_mat = L_vals @ mask.T # (n_l, n_sentences)
+    L_mat = L_vals @ mask.T   # (n_l, n_sentences)
 
+    # Structured (bank × year) aggregation for Kendall's W
+    banks = sorted(df["bank"].unique())
+    years = sorted(df["year"].unique())
+    n_banks, n_years = len(banks), len(years)
+    bank_to_idx = {b: i for i, b in enumerate(banks)}
+    year_to_idx = {y: i for i, y in enumerate(years)}
+    group_idx = np.array([bank_to_idx[b] * n_years + year_to_idx[y]
+                          for b, y in zip(df["bank"], df["year"])])
+    n_groups_by = n_banks * n_years
+    one_hot_by = np.zeros((len(df), n_groups_by), dtype=np.float32)
+    one_hot_by[np.arange(len(df)), group_idx] = 1.0
+    counts_by = np.maximum(one_hot_by.sum(axis=0), 1.0)
+
+    # Flat bank-year aggregation for mean/std/CV reporting
     bank_year = df[["bank", "year"]].astype(str).agg("_".join, axis=1).to_numpy()
     unique_keys, inverse = np.unique(bank_year, return_inverse=True)
     n_groups = len(unique_keys)
-
     one_hot = np.zeros((len(df), n_groups), dtype=np.float32)
     one_hot[np.arange(len(df)), inverse] = 1.0
-    counts = np.maximum(one_hot.sum(axis=0), 1.0)  # (n_groups,)
+    counts = np.maximum(one_hot.sum(axis=0), 1.0)
 
-    # grid search
-    best_cv = -np.inf
+    best_w = -np.inf
     best_params: dict = {}
     rows: list[dict] = []
 
     for p_idx in tqdm(range(n_p), desc="P_action"):
         p_dict = valid_p[p_idx]
         p_indet = p_dict["Indeterminate"]
-        p_arr = P_mat[p_idx]   # (n_sentences,)
+        p_arr = P_mat[p_idx]
 
-        # base_wrs for all L combos at once: (n_l, n_sentences)
-        # base_wrs[j, i] = p_arr[i] x (1 − L_arr[j, i] x es[i])
-        base_all = p_arr[None, :] * (1.0 - L_mat * es[None, :])
+        base_all = p_arr[None, :] * (1.0 - L_mat * es[None, :])  # (n_l, n_sentences)
 
         for c_val in C_GRIDS:
-            if p_indet * c_val > 1.0:   # WRS-bound constraint
+            if p_indet * c_val > 1.0:   # WRS upper-bound constraint
                 continue
 
-            # Apply contradiction amplifier: (n_l, n_sentences)
             wrs_all = np.where(
                 is_contr[None, :],
                 np.minimum(base_all * c_val, 1.0),
                 base_all,
             ).clip(0.0, 1.0)
 
-            # Aggregate -> (n_l, n_groups) -> EWRI x 100
-            ewri_all = (wrs_all @ one_hot / counts[None, :]) * 100.0
+            # ── Primary objective: Kendall's W ──────────────────────────────
+            ewri_by = (wrs_all @ one_hot_by / counts_by[None, :]) * 100.0  # (n_l, n_banks*n_years)
+            ewri_mat = ewri_by.reshape(n_l, n_banks, n_years)               # (n_l, n_banks, n_years)
+            w_all = _kendall_w_batch(ewri_mat)                              # (n_l,)
 
-            std_all = ewri_all.std(axis=1) # (n_l,)
-            mean_all = ewri_all.mean(axis=1) # (n_l,)
+            # ── Secondary metrics (CV, mean, std) ───────────────────────────
+            ewri_cv = (wrs_all @ one_hot / counts[None, :]) * 100.0
+            std_all = ewri_cv.std(axis=1)
+            mean_all = ewri_cv.mean(axis=1)
             cv_all = np.where(mean_all > 0, std_all / mean_all, 0.0)
 
-            # Track best
-            best_l = int(np.argmax(cv_all))
-            if cv_all[best_l] > best_cv:
-                best_cv = cv_all[best_l]
+            best_l = int(np.argmax(w_all))
+            if w_all[best_l] > best_w:
+                best_w = float(w_all[best_l])
                 best_params = {
                     "P": p_dict,
                     "Lambda": valid_l[best_l],
                     "C": c_val,
                     "Mean": float(mean_all[best_l]),
                     "Std": float(std_all[best_l]),
-                    "CV": float(best_cv),
+                    "CV": float(cv_all[best_l]),
+                    "KendallW": best_w,
                 }
 
-            # Collect all L results for this (P, C)
             for l_idx in range(n_l):
                 l_dict = valid_l[l_idx]
                 rows.append({
@@ -133,14 +165,19 @@ def run_grid_search(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
                     "Mean_EWRI": float(mean_all[l_idx]),
                     "Std_EWRI": float(std_all[l_idx]),
                     "CV_EWRI": float(cv_all[l_idx]),
+                    "KendallW_EWRI": float(w_all[l_idx]),
                 })
 
-    results_df = pd.DataFrame(rows).sort_values("CV_EWRI", ascending=False).reset_index(drop=True)
+    results_df = (pd.DataFrame(rows)
+                  .sort_values("KendallW_EWRI", ascending=False)
+                  .reset_index(drop=True))
     return results_df, best_params
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Vectorised EWRI grid search.")
+    parser = argparse.ArgumentParser(
+        description="EWRI grid search — objective: Kendall's W (rank concordance across years)."
+    )
     parser.add_argument("--input", default="outputs/experiments/evidence/evidence_nli.parquet")
     parser.add_argument("--output", default="outputs/ewri_grid_search_results.csv")
     args = parser.parse_args()
@@ -156,12 +193,13 @@ def main():
 
     results_df, best = run_grid_search(df)
 
-    print("\n" + "=" * 55)
-    print("EWRI GRID SEARCH  (objective = CV = Std / Mean)")
-    print("=" * 55)
-    print(f"Best CV   : {best['CV']:.4f}")
-    print(f"Std EWRI  : {best['Std']:.4f}")
-    print(f"Mean EWRI : {best['Mean']:.2f}")
+    print("\n" + "=" * 60)
+    print("EWRI GRID SEARCH  (objective = Kendall's W)")
+    print("=" * 60)
+    print(f"Best Kendall's W : {best['KendallW']:.4f}")
+    print(f"Mean EWRI        : {best['Mean']:.2f}")
+    print(f"Std EWRI         : {best['Std']:.4f}")
+    print(f"CV (secondary)   : {best['CV']:.4f}")
     print(f"\nOptimal parameters:")
     print(f"  P_action : {best['P']}")
     print(f"  Lambda   : {best['Lambda']}")
