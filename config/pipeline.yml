@@ -35,7 +35,7 @@ evidence:
     tfidf_max_features: 3000
     tfidf_ngram_range: [1, 2]
     tfidf_max_df: 0.95
-    nli_contradiction_threshold: 0.2
+    nli_contradiction_threshold: 0.5
 
 ewri:
   action_penalty:

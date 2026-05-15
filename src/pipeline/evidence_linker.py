@@ -293,13 +293,17 @@ class ClaimEvidenceLinker:
                 nli_by_rank[item["rank"]] = (
                     float(nli_result.entailment_score),
                     str(nli_result.label),
+                    float(nli_result.scores.get("contradiction", 0.0)),
                 )
 
         for item in pre_candidates:
-            nli_score, nli_label = nli_by_rank.get(item["rank"], (0.5, "neutral"))
+            nli_score, nli_label, contradiction_score = nli_by_rank.get(
+                item["rank"], (0.5, "neutral", 0.0)
+            )
 
-            if nli_label == "contradiction" and nli_score < self.nli_contradiction_threshold:
-                continue
+            # Filter out low-confidence contradictions (contradiction_score below threshold)
+            if nli_label == "contradiction" and contradiction_score < self.nli_contradiction_threshold:
+                nli_label = "neutral"
 
             all_evidence.append({
                 "evidence_idx": item["evidence_idx"],
@@ -423,6 +427,20 @@ class ClaimEvidenceLinker:
             })
 
         result_df = pd.DataFrame(results)
+
+        # Override contradiction → neutral for pairs with similarity above the mean
+        # of all contradiction pairs in this corpus run (data-driven threshold).
+        if self.use_nli:
+            contra_mask = result_df["nli_label"] == "contradiction"
+            if contra_mask.sum() > 0:
+                mean_contra_sim = result_df.loc[contra_mask, "similarity_score"].mean()
+                override_mask = contra_mask & (result_df["similarity_score"] > mean_contra_sim)
+                result_df.loc[override_mask, "nli_label"] = "neutral"
+                if override_mask.sum() > 0:
+                    print(
+                        f"[EvidenceLinker] Contradiction override: {override_mask.sum()} pairs "
+                        f"(sim > mean {mean_contra_sim:.3f}) → neutral"
+                    )
 
         found = result_df["evidence_found"].sum()
         print(f"\n[EvidenceLinker] Evidence found: {found}/{len(result_df)} ({100*found/len(result_df):.1f}%)")
