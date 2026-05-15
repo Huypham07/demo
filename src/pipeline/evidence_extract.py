@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+import yaml
 
 from src.pipeline.evidence_detector import process_dataframe as detect_evidence
 from src.pipeline.evidence_linker import run_linking_variant
@@ -37,3 +39,45 @@ def evidence_extract(
     df["nli_label"] = links_df["nli_label"].values
     df["evidence_variant"] = variant
     return df
+
+with open("config/pipeline.yml") as f:
+    CFG = yaml.safe_load(f)
+
+def main() -> None:
+    CORPUS_PATH = Path("data/corpus/actionability_sentences.parquet")
+    if not CORPUS_PATH.exists():
+        raise FileNotFoundError(
+            f"{CORPUS_PATH} không tồn tại.\n"
+            "Chạy phần Phụ lục ở cuối notebook trước."
+        )
+
+    df_corpus = pd.read_parquet(CORPUS_PATH)
+    print(f"Corpus: {len(df_corpus):,} ESG sentences")
+
+    OUT_EV = Path("outputs/experiments/evidence")
+    OUT_EV.mkdir(parents=True, exist_ok=True)
+    rq2 = {}
+    for variant in ["nli", "window", "no_nli"]:
+        cache = OUT_EV / f"evidence_{variant}.parquet"
+        if cache.exists():
+            df_v = pd.read_parquet(cache)
+            print(f"[{variant}] loaded from cache")
+        else:
+            print(f"[{variant}] computing…")
+            df_v = evidence_extract(df_corpus.copy(), variant=variant, config=CFG)
+            df_v.to_parquet(cache, index=False)
+
+        n_total = len(df_v)
+        n_ev = int(df_v["has_evidence"].sum()) if "has_evidence" in df_v.columns else 0
+        avg_sim = float(df_v["similarity_score"].mean()) if "similarity_score" in df_v.columns else 0.0
+        nli_cnt = df_v["nli_label"].value_counts(dropna=False).to_dict() \
+            if "nli_label" in df_v.columns else {}
+        rq2[variant] = dict(
+            evidence_rate_pct=round(n_ev / n_total * 100, 1),
+            avg_similarity=round(avg_sim, 4),
+            entailment_pct=round(nli_cnt.get("entailment", 0) / max(n_ev, 1) * 100, 1),
+            contradiction_pct=round(nli_cnt.get("contradiction", 0) / max(n_ev, 1) * 100, 1),
+        )
+
+if __name__ == "__main__":
+    main()

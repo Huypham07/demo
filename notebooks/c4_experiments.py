@@ -169,31 +169,7 @@ OUT_EV = ROOT / "outputs/experiments/evidence"
 OUT_EV.mkdir(parents=True, exist_ok=True)
 
 # %%
-rq2 = {}
-for variant in ["nli", "window", "no_nli"]:
-    cache = OUT_EV / f"evidence_{variant}.parquet"
-    if cache.exists():
-        df_v = pd.read_parquet(cache)
-        print(f"[{variant}] loaded from cache")
-    else:
-        print(f"[{variant}] computing…")
-        df_v = evidence_extract(df_corpus.copy(), variant=variant, config=CFG)
-        df_v.to_parquet(cache, index=False)
 
-    n_total = len(df_v)
-    n_ev    = int(df_v["has_evidence"].sum()) if "has_evidence" in df_v.columns else 0
-    avg_sim = float(df_v["similarity_score"].mean()) if "similarity_score" in df_v.columns else 0.0
-    nli_cnt = df_v["nli_label"].value_counts(dropna=False).to_dict() \
-              if "nli_label" in df_v.columns else {}
-    rq2[variant] = dict(
-        evidence_rate_pct = round(n_ev / n_total * 100, 1),
-        avg_similarity    = round(avg_sim, 4),
-        entailment_pct    = round(nli_cnt.get("entailment", 0)    / max(n_ev, 1) * 100, 1),
-        contradiction_pct = round(nli_cnt.get("contradiction", 0) / max(n_ev, 1) * 100, 1),
-    )
-
-print("\n=== RQ2 Summary ===")
-print(pd.DataFrame(rq2).T.to_string())
 
 # %% [markdown]
 # ## 2b. Grid Search tham số EWRI
