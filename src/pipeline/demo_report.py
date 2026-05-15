@@ -439,10 +439,10 @@ def generate_demo_report(
     entropy = calculate_topic_entropy(topic_counts)
 
     sent_risks = sorted(ewri_score.sentence_risks, key=lambda r: r.get("washing_risk", 0), reverse=True)
-    top_risk    = sent_risks[:10]
+    top_risk    = sent_risks[:50]
     positives   = [r for r in sent_risks if r.get("action_label") == "Implemented" and r.get("has_evidence")]
     positives.sort(key=lambda r: r.get("washing_risk", 0))
-    top_positive = positives[:5]
+    top_positive = positives[:20]
 
     # block_text lookups from esg_df (fallback for sentence_risks without block_text)
     bt_lookup:      dict[str, str] = {}
@@ -544,8 +544,8 @@ def generate_demo_report(
                  for k, v in nli_counts.items()],
             ))
 
-    # 5. Top-10 risk claims
-    parts.append('<h2>5. Top 10 câu rủi ro cao nhất (kèm lý do flagged)</h2>')
+    # 5. Top-50 risk claims
+    parts.append('<h2>5. Top 50 câu rủi ro cao nhất (kèm lý do flagged)</h2>')
     parts.append('<p style="margin-bottom:12px;font-size:.9em;color:#555">'
                  'Mỗi câu được phân tích bằng quy tắc ký hiệu (Bloom + Hyland). '
                  'Câu được xét <mark class="hl-sent">nổi bật màu vàng</mark> trong đoạn văn gốc.</p>')
@@ -612,7 +612,7 @@ def generate_demo_report(
         explained_top.append({**r, "explanation": explanation})
 
     # 6. Positive examples
-    parts.append('<h2>6. Top 5 ví dụ tích cực (Implemented + có evidence)</h2>')
+    parts.append('<h2>6. Top 20 ví dụ tích cực (Implemented + có evidence)</h2>')
     if top_positive:
         for i, r in enumerate(top_positive):
             sent_id    = str(r.get("sent_id", ""))
@@ -644,7 +644,7 @@ def generate_demo_report(
 
     # 7. Section breakdown
     parts.append('<h2>7. Phân tích theo chương / mục báo cáo</h2>')
-    sec_rows = _section_breakdown(esg_df, top_n=10)
+    sec_rows = _section_breakdown(esg_df, top_n=50)
     if sec_rows:
         parts.append(_table_html(
             ["Chương / Mục", "Số câu ESG", "EWRI", "Indet %", "Plan %", "Impl %", "Evidence %"],
