@@ -481,10 +481,8 @@ def _build_popup_data(esg_df: pd.DataFrame) -> dict:
 
 
 def _is_full_document(sentences_df: pd.DataFrame, esg_df: pd.DataFrame) -> bool:
-    """True if sentences_df contains non-ESG sentences (i.e. the full extracted document)."""
-    if "topic_label" not in sentences_df.columns:
-        return False
-    return (sentences_df["topic_label"] == "Non_ESG").any()
+    """True if sentences_df is the full extracted document (more rows than ESG-only esg_df)."""
+    return len(sentences_df) > len(esg_df)
 
 
 def _build_document_html(sentences_df: pd.DataFrame, esg_df: pd.DataFrame) -> str:

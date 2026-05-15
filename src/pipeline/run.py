@@ -60,7 +60,6 @@ def main() -> None:
     print()
     print(f"Done. EWRI = {score.ewri:.2f} / 100.")
     print(f"  HTML report : {html_path}")
-    print(f"  JSON report : {html_path.with_suffix('.json')}")
     print(f"  Enriched data: {output_dir / 'enriched.parquet'}")
 
 
