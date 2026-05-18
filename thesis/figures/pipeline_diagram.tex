@@ -1,0 +1,167 @@
+% ESG-Washing Detection Pipeline — 4 main blocks matching thesis structure
+% Libraries: positioning, fit, backgrounds, arrows.meta, calc
+\begin{figure}[H]
+\centering
+\resizebox{0.62\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\scriptsize, >=Stealth,
+  node distance=0.20cm,
+  phdr/.style={
+    fill=#1, text=white, rounded corners=2pt,
+    minimum width=8.8cm, minimum height=0.46cm,
+    align=center, font=\bfseries\scriptsize
+  },
+  pbody/.style={
+    minimum width=8.4cm, text width=8.2cm,
+    align=center, font=\tiny, inner sep=2pt
+  },
+  pill/.style={
+    draw=#1!65, fill=#1!10, rounded corners=2pt,
+    minimum height=0.42cm, align=center,
+    font=\tiny, inner sep=2pt
+  },
+  io/.style={
+    fill=#1, text=white, rounded corners=8pt,
+    minimum width=4.4cm, minimum height=0.52cm,
+    align=center, font=\scriptsize\bfseries
+  },
+  arr/.style={->, gray!60, line width=0.8pt},
+  dsh/.style={->, dashed, violet!65, line width=0.7pt},
+]
+
+%% ── INPUT ────────────────────────────────────────────────────────
+\node[io=black!65] (input) {Annual Report (PDF/TXT)};
+
+%% ── DATA PREPROCESSING ──────────────────────────────────────────
+\node[draw=gray!45, fill=gray!6, rounded corners=3pt, dashed,
+      minimum width=7.5cm, text width=7.3cm,
+      below=0.65cm of input, align=center, font=\tiny, inner sep=4pt] (prep)
+  {\textbf{Data Preprocessing} \\[2pt]
+   Sentence split \& Noise filter \enspace$\to$\enspace Context tagging};
+
+\draw[arr] (input) -- (prep);
+
+%% ── BLOCK 1: TOPIC CLASSIFICATION ───────────────────────────────
+\node[phdr=violet!80!black, below=0.90cm of prep] (t1)
+  {Topic Classification};
+
+\node[pill=violet, minimum width=3.6cm,
+      below=0.18cm of t1] (rules1)
+  {\bfseries Symbolic Rules};
+
+\node[pill=violet, below=0.50cm of rules1,
+      minimum width=2.2cm] (bert1) {\bfseries PhoBERT};
+
+\draw[dsh] (rules1.south)
+  -- node[right, font=\tiny, text=violet!80!black, xshift=2pt] {Semantic Loss}
+  (bert1.north);
+
+\node[pill=teal, below=0.30cm of bert1,
+      minimum width=8.2cm, text width=8.0cm] (topicout)
+  {E \enspace/\enspace S\_labor \enspace/\enspace S\_community
+   \enspace/\enspace S\_product \enspace/\enspace G \enspace/\enspace Non-ESG};
+
+\draw[->, teal!65, line width=0.8pt] (bert1) -- (topicout);
+
+\begin{scope}[on background layer]
+  \node[draw=violet!40, fill=violet!5, rounded corners=4pt, inner sep=7pt,
+        fit=(t1)(rules1)(bert1)(topicout)] (bg1) {};
+\end{scope}
+
+%% ── BLOCK 2: ACTION CLASSIFICATION ──────────────────────────────
+\node[phdr=teal!70!blue, below=0.90cm of bg1] (t2)
+  {Action Classification};
+
+\node[pill=teal!70!blue, minimum width=3.6cm,
+      below=0.18cm of t2] (rules2)
+  {\bfseries Symbolic Rules};
+
+\node[pill=teal!80!blue, below=0.50cm of rules2,
+      minimum width=2.2cm] (bert2) {\bfseries PhoBERT};
+
+\draw[->, dashed, teal!60!blue, line width=0.7pt] (rules2.south)
+  -- node[right, font=\tiny, text=teal!70!blue, xshift=2pt] {Semantic Loss}
+  (bert2.north);
+
+\node[pill=teal!70!blue, below=0.30cm of bert2,
+      minimum width=6.5cm, text width=6.3cm] (actout)
+  {Implemented \enspace/\enspace Planning \enspace/\enspace Indeterminate};
+
+\draw[->, teal!55!blue!65, line width=0.8pt] (bert2) -- (actout);
+
+\begin{scope}[on background layer]
+  \node[draw=teal!40!blue!40, fill=teal!3!blue!3, rounded corners=4pt, inner sep=7pt,
+        fit=(t2)(rules2)(bert2)(actout)] (bg2) {};
+\end{scope}
+
+%% ── NEURO-SYMBOLIC BRACKET (spans Block 1 and Block 2) ──────────
+\draw[violet!55, line width=1.2pt]
+  ([xshift=-0.45cm]bg1.north west) -- ([xshift=-0.45cm]bg2.south west);
+\draw[violet!55, line width=1.0pt]
+  ([xshift=-0.45cm]bg1.north west) -- ([xshift=-0.24cm]bg1.north west);
+\draw[violet!55, line width=1.0pt]
+  ([xshift=-0.45cm]bg2.south west) -- ([xshift=-0.24cm]bg2.south west);
+\node[rotate=90, font=\scriptsize\bfseries, text=violet!65!black, anchor=center]
+  at ($(bg1.north west)!0.5!(bg2.south west) + (-0.70cm, 0)$)
+  {Neuro-Symbolic Classification};
+
+%% ── BLOCK 3: EVIDENCE LINKING ────────────────────────────────────
+\node[phdr=orange!82!black, below=0.90cm of bg2] (t3) {Evidence Linking};
+
+\node[pill=orange!75!black, below=0.22cm of t3,
+      minimum width=3.8cm, text width=3.6cm] (ret)
+  {Retrieval \\
+   \tiny TF-IDF \;+\; Sentence-BERT};
+
+\node[pill=orange!75!black, below=0.26cm of ret,
+      minimum width=3.8cm, text width=3.6cm] (nli)
+  {Verification (NLI) \\
+   \tiny mDeBERTa-v3-xnli};
+
+\draw[->, orange!55!black, line width=0.8pt] (ret) -- (nli);
+
+\node[pill=green!55!black, minimum width=1.9cm] (ent)
+  at ($(nli.south) + (-2.6cm, -0.46cm)$) {Entailment};
+
+\node[pill=blue!45!gray,   minimum width=1.9cm] (neu)
+  at ($(nli.south) + (0cm,   -0.46cm)$)  {Neutral};
+
+\node[pill=red!65!black,   minimum width=1.9cm] (con)
+  at ($(nli.south) + (2.6cm, -0.46cm)$)  {Contradiction};
+
+\draw[->, green!50!black,  line width=0.8pt] (nli.south) -- (ent.north);
+\draw[->, blue!40!gray,    line width=0.8pt] (nli.south) -- (neu.north);
+\draw[->, red!55!black,    line width=0.8pt] (nli.south) -- (con.north);
+
+\begin{scope}[on background layer]
+  \node[draw=orange!50!black, fill=orange!5, rounded corners=4pt, inner sep=7pt,
+        fit=(t3)(ret)(nli)(ent)(neu)(con)] (bg3) {};
+\end{scope}
+
+%% ── BLOCK 4: EWRI CALCULATION ────────────────────────────────────
+\node[phdr=green!62!black, below=0.90cm of bg3] (t4) {EWRI Calculation};
+
+\node[pbody, below=0.14cm of t4] (b4)
+  {WRS per sentence \enspace$\longrightarrow$\enspace EWRI aggregation};
+
+\begin{scope}[on background layer]
+  \node[draw=green!50!black, fill=green!5, rounded corners=4pt, inner sep=6pt,
+        fit=(t4)(b4)] (bg4) {};
+\end{scope}
+
+%% ── OUTPUT ───────────────────────────────────────────────────────
+\node[io=green!58!black, below=0.90cm of bg4] (output)
+  {ESG-Washing Risk Index (EWRI)};
+
+%% ── INTER-BLOCK ARROWS ───────────────────────────────────────────
+\draw[arr] (prep)  -- node[right, font=\tiny, text=gray!65] {Sentence corpus} (bg1);
+\draw[arr] (bg1)   -- node[right, font=\tiny, text=gray!65] {ESG sentences}   (bg2);
+\draw[arr] (bg2)   -- node[right, font=\tiny, text=gray!65] {ESG + labels}    (bg3);
+\draw[arr] (bg3)   -- node[right, font=\tiny, text=gray!65] {NLI verdicts}    (bg4);
+\draw[arr] (bg4)   -- (output);
+
+\end{tikzpicture}%
+}% end resizebox
+\caption{Kiến trúc tổng thể pipeline phát hiện và lượng hóa rủi ro ESG-washing.}
+\label{fig:pipeline_overview}
+\end{figure}

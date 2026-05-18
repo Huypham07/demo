@@ -19,6 +19,8 @@ Hệ thống đề xuất được thiết kế dưới dạng pipeline nối ti
     \item \textbf{Lượng hóa rủi ro EWRI}: Tổng hợp kết quả từ ba giai đoạn trên thành điểm rủi ro ở mức câu, sau đó tổng hợp thành chỉ số ở mức ngân hàng theo năm.
 \end{enumerate}
 
+\input{figures/pipeline_diagram}
+
 Điểm đặc trưng của pipeline là toàn bộ quá trình phân tích chỉ sử dụng dữ liệu nội tại trong cùng một bản báo cáo, không phụ thuộc nguồn dữ liệu ESG bên ngoài hay điểm xếp hạng từ bên thứ ba. Thiết kế này cho phép áp dụng tại các thị trường mới nổi nơi hạ tầng giám sát ESG độc lập còn hạn chế.
 
 Hai giai đoạn phân loại (1) và (2) được huấn luyện theo kiến trúc neuro-symbolic (Chương~\ref{ch:theory}, Mục~\ref{sec:neuro_symbolic}), trong đó tri thức từ các khung ngôn ngữ được tích hợp trực tiếp vào quá trình huấn luyện qua hàm mất mát ngữ nghĩa. Quá trình tạo dữ liệu huấn luyện sử dụng LLM để gán nhãn tự động, sau đó đối chiếu với quy tắc ký hiệu để nâng cao chất lượng nhãn.
